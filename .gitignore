@@ -5,6 +5,10 @@ __pycache__/
 *.pyo
 venv/
 
+# Client data — never commit
+clients/*/config.json
+clients/*/system_prompt.txt
+
 # Client runtime data
 clients/*/state.json
 clients/*/analytics.json
