@@ -1,11 +1,30 @@
 .env
+.DS_Store
 __pycache__/
 *.pyc
 *.pyo
 venv/
+
+# Client runtime data
 clients/*/state.json
 clients/*/analytics.json
 clients/*/conversations_log.json
 clients/*/agent.log
 clients/*/examples.json
 clients/*/linkedin_profile/
+clients/*.zip
+
+# Root-level runtime files
+agent.log
+conversations_log.json
+examples.json
+calendly_last_seen.json
+state.json
+
+# Old agent folder
+linkedin-agent/
+
+# Generated files
+*.pdf
+create_notion_guide*.py
+generate_onboarding_pdf.py

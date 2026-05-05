@@ -1,6 +1,0 @@
-2026/04/20-16:22:20.079 13826c6 Reusing MANIFEST /Users/savassuner/CLAUDE CODE/linkedin-agent/linkedin_profile/Default/Local Storage/leveldb/MANIFEST-000001
-2026/04/20-16:22:20.086 13826c6 Recovering log #3
-2026/04/20-16:22:20.089 13826c6 Reusing old log /Users/savassuner/CLAUDE CODE/linkedin-agent/linkedin_profile/Default/Local Storage/leveldb/000003.log 
-2026/04/20-16:23:20.102 13826c9 Level-0 table #5: started
-2026/04/20-16:23:20.113 13826c9 Level-0 table #5: 33908 bytes OK
-2026/04/20-16:23:20.119 13826c9 Delete type=0 #3
