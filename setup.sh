@@ -2,11 +2,12 @@
 set -e
 
 CLIENT_NAME="$1"
+ANTHROPIC_KEY="$2"
 REPO="https://github.com/savas-web/linkedin-agent-2.git"
 INSTALL_DIR="$HOME/Desktop/linkedin-agent-2"
 
-if [ -z "$CLIENT_NAME" ]; then
-    echo "Usage: bash setup.sh <client_name>"
+if [ -z "$CLIENT_NAME" ] || [ -z "$ANTHROPIC_KEY" ]; then
+    echo "Usage: bash setup.sh <client_name> <anthropic_api_key>"
     exit 1
 fi
 
@@ -44,43 +45,37 @@ else
     cd "$INSTALL_DIR"
 fi
 
-# Check for config files
-CONFIG_FILE="$INSTALL_DIR/clients/$CLIENT_NAME/config.json"
-PROMPT_FILE="$INSTALL_DIR/clients/$CLIENT_NAME/system_prompt.txt"
-
-if [ ! -f "$CONFIG_FILE" ] || [ ! -f "$PROMPT_FILE" ]; then
-    echo ""
-    echo "Almost there! You need to add two files before the agent can start:"
-    echo ""
-    echo "  1. config.json       -> $INSTALL_DIR/clients/$CLIENT_NAME/config.json"
-    echo "  2. system_prompt.txt -> $INSTALL_DIR/clients/$CLIENT_NAME/system_prompt.txt"
-    echo ""
-    echo "Your account manager will send these to you."
-    echo "Once you have added them, run:"
-    echo ""
-    echo "  cd $INSTALL_DIR && bash install_client.sh $CLIENT_NAME && bash install_updater.sh $CLIENT_NAME"
-    echo ""
-    mkdir -p "$INSTALL_DIR/clients/$CLIENT_NAME"
-    exit 0
-fi
+# Write .env from shared_config + Anthropic key
+source "$INSTALL_DIR/shared_config.sh"
+cat > "$INSTALL_DIR/.env" <<EOF
+ANTHROPIC_API_KEY=$ANTHROPIC_KEY
+DASHBOARD_URL=$DASHBOARD_URL
+DASHBOARD_API_KEY=$DASHBOARD_API_KEY
+EOF
 
 # Set up Python venv
 if [ ! -d "$INSTALL_DIR/venv" ]; then
     echo "Installing Python dependencies..."
-    cd "$INSTALL_DIR"
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt --quiet
+    python3 -m venv "$INSTALL_DIR/venv"
+    source "$INSTALL_DIR/venv/bin/activate"
+    pip install -r "$INSTALL_DIR/requirements.txt" --quiet
 fi
 
-# Set up .env if missing
-ENV_FILE="$INSTALL_DIR/.env"
-if [ ! -f "$ENV_FILE" ]; then
+# Check for config files
+CONFIG_FILE="$INSTALL_DIR/clients/$CLIENT_NAME/config.json"
+PROMPT_FILE="$INSTALL_DIR/clients/$CLIENT_NAME/system_prompt.txt"
+mkdir -p "$INSTALL_DIR/clients/$CLIENT_NAME"
+
+if [ ! -f "$CONFIG_FILE" ] || [ ! -f "$PROMPT_FILE" ]; then
     echo ""
-    echo "One more thing — add your .env file to:"
-    echo "  $ENV_FILE"
+    echo "Almost there! Send the client their two files via Telegram:"
     echo ""
-    echo "Your account manager will send this to you."
+    echo "  config.json       -> $CONFIG_FILE"
+    echo "  system_prompt.txt -> $PROMPT_FILE"
+    echo ""
+    echo "Once they are in place, run:"
+    echo "  cd $INSTALL_DIR && bash install_client.sh $CLIENT_NAME && bash install_updater.sh $CLIENT_NAME"
+    echo ""
     exit 0
 fi
 
