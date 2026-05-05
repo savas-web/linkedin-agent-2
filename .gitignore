@@ -12,6 +12,7 @@ clients/*/conversations_log.json
 clients/*/agent.log
 clients/*/examples.json
 clients/*/linkedin_profile/
+linkedin_profile/
 clients/*.zip
 
 # Root-level runtime files
