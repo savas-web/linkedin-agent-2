@@ -1,0 +1,21 @@
+2026/04/28-08:35:39.084 17a4843 Reusing MANIFEST /Users/savassuner/CLAUDE CODE/linkedin-agent-2/linkedin_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/04/28-08:35:39.090 17a4843 Recovering log #114
+2026/04/28-08:35:39.092 17a4843 Reusing old log /Users/savassuner/CLAUDE CODE/linkedin-agent-2/linkedin_profile/Default/Local Storage/leveldb/000114.log 
+2026/04/28-08:42:42.894 17a4847 Level-0 table #118: started
+2026/04/28-08:42:42.908 17a4847 Level-0 table #118: 33782 bytes OK
+2026/04/28-08:42:42.913 17a4847 Delete type=0 #114
+2026/04/28-10:29:37.188 17a4847 Level-0 table #120: started
+2026/04/28-10:29:37.200 17a4847 Level-0 table #120: 37158 bytes OK
+2026/04/28-10:29:37.208 17a4847 Delete type=0 #117
+2026/04/28-12:30:43.027 17a4847 Level-0 table #122: started
+2026/04/28-12:30:43.038 17a4847 Level-0 table #122: 37519 bytes OK
+2026/04/28-12:30:43.043 17a4847 Delete type=0 #119
+2026/04/28-12:30:43.047 17a4843 Compacting 4@0 + 1@1 files
+2026/04/28-12:30:43.053 17a4843 Generated table #123@0: 2662 keys, 36915 bytes
+2026/04/28-12:30:43.053 17a4843 Compacted 4@0 + 1@1 files => 36915 bytes
+2026/04/28-12:30:43.055 17a4843 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/04/28-12:30:43.056 17a4843 Delete type=2 #115
+2026/04/28-12:30:43.056 17a4843 Delete type=2 #112
+2026/04/28-12:30:43.056 17a4843 Delete type=2 #122
+2026/04/28-12:30:43.056 17a4843 Delete type=2 #120
+2026/04/28-12:30:43.056 17a4843 Delete type=2 #118

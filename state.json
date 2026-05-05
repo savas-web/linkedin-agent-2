@@ -1,0 +1,34 @@
+{
+  "total_sent": 101,
+  "pending_approvals": {
+    "89224abd": {
+      "thread_id": "2-NDJlZGQ1NjctNDZjZC00MWIxLTk4YWUtNDkxNjk2NzE1ZWViXzEwMA==",
+      "name": "Beth Thomas",
+      "their_message": "Hey there Savas, thanks for your message! Yes indeed, although I'm shifting more into using my name as the overall brand now that my services cover more than coaching. Is there anything in particular I can help you with?",
+      "proposed_reply": "Hey! That makes total sense \u2014 building around your name gives you so much more flexibility as you grow. What kind of services are you expanding into?",
+      "tg_message_id": 8
+    },
+    "b1bb506d": {
+      "thread_id": "2-NmQyYTBhODctOTAzYi00NzAzLWEwOWEtZTE3ODRkZTdhZWE0XzEwMA==",
+      "name": "Stephanie Tess Manrique",
+      "their_message": "And then we can see if it makes sense to set up a meeting, sorry I am getting loads of these messages every week.",
+      "proposed_reply": "Hey Stephanie, totally get it and no need to apologize at all! \ud83d\ude0a\n\nSo the honest answer is it really depends on your specific situation. Where you're at, who your ideal client is, what's worked before and what hasn't. Without knowing that I'd just be giving you a generic answer and that's exactly what I don't want to do.\n\nWhat I can tell you is that everything we do is completely personalised. No templates, no mass outreach. Real research, real conversations tailored to the right people for your business specifically.\n\nTo give you anything actually useful I'd need to ask you a few questions first if that's okay? \n\nStarting with the basics... what kind of coaching do you do? \ud83d\ude0a",
+      "tg_message_id": 15
+    },
+    "7b38458e": {
+      "thread_id": "2-ZTRiYTU4MTctN2ExYy00ZWQxLWFiM2UtMjlhMjg2ZTYxYWU5XzEwMA==",
+      "name": "Joanna Avin",
+      "their_message": "Yes, it is",
+      "proposed_reply": "Hey Joanna, great to connect! What is the name of your coaching business?",
+      "tg_message_id": 88
+    }
+  },
+  "approved_queue": [],
+  "awaiting_edit": null,
+  "mark_unread_queue": [],
+  "reply_cooldown": {
+    "2-ZDIzNjI1NTMtZDBmMC00NWVhLWE2Y2EtMWFhMjdkODYzZDg2XzAxMA==": "2026-04-24T19:11:34.708789+00:00",
+    "2-ODE4NmZhMDAtYTBkNi00Y2ZmLTg1M2UtMTAxZjQzZDNlMGRjXzEwMA==": "2026-04-24T19:17:01.359644+00:00",
+    "2-N2I4NjIwMDMtZTkyMS00NWE1LTg1ZjItOGQ5NjczYThkZTM4XzEwMA==": "2026-04-24T19:35:04.187126+00:00"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "agent_name": "LinkedIn Agent",
+  "telegram_bot_token": "8721203556:AAExDBgGrh_RUELASm7xGzGUBdjGnawiNzs",
+  "telegram_chat_id": -1003473985358,
+  "calendly_link": "https://calendly.com/rooney-digital/flight-review-call",
+  "calendly_api_token": "",
+  "auto_threshold": 999999,
+  "poll_interval": 300,
+  "claude_model": "claude-sonnet-4-6",
+  "dashboard_token": "rooney-2026"
+}

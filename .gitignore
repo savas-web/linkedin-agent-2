@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+venv/
+clients/*/state.json
+clients/*/analytics.json
+clients/*/conversations_log.json
+clients/*/agent.log
+clients/*/examples.json
+clients/*/linkedin_profile/

@@ -1,0 +1,14 @@
+{
+  "total_sent": 4,
+  "pending_approvals": {
+    "89224abd": {
+      "thread_id": "2-NDJlZGQ1NjctNDZjZC00MWIxLTk4YWUtNDkxNjk2NzE1ZWViXzEwMA==",
+      "name": "Beth Thomas",
+      "their_message": "Hey there Savas, thanks for your message! Yes indeed, although I'm shifting more into using my name as the overall brand now that my services cover more than coaching. Is there anything in particular I can help you with?",
+      "proposed_reply": "Hey! That makes total sense \u2014 building around your name gives you so much more flexibility as you grow. What kind of services are you expanding into?",
+      "tg_message_id": 8
+    }
+  },
+  "approved_queue": [],
+  "awaiting_edit": null
+}

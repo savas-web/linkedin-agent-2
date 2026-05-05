@@ -1,0 +1,11 @@
+{
+  "agent_name": "AGENT_NAME",
+  "telegram_bot_token": "YOUR_BOT_TOKEN",
+  "telegram_chat_id": 0,
+  "calendly_link": "https://calendly.com/YOUR_LINK",
+  "calendly_api_token": "",
+  "auto_threshold": 999999,
+  "poll_interval": 300,
+  "claude_model": "claude-sonnet-4-6",
+  "dashboard_token": "CLIENT_TOKEN"
+}
