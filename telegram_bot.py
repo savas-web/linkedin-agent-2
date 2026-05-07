@@ -92,8 +92,8 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data["awaiting_edit"] = approval_id
         st.save(data)
         await query.edit_message_text(
-            f"✏️ Type your edited reply for *{item['name']}*\.\n\nSend /cancel to go back\.",
-            parse_mode="MarkdownV2"
+            f"✏️ Type your edited reply for *{item['name']}*. Send /cancel to go back.",
+            parse_mode="Markdown"
         )
 
     elif action == "skip":
