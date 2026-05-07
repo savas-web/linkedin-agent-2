@@ -4,7 +4,7 @@ set -e
 CLIENT_NAME="$1"
 ANTHROPIC_KEY="$2"
 REPO="https://github.com/savas-web/linkedin-agent-2.git"
-INSTALL_DIR="$HOME/Desktop/linkedin-agent-2"
+INSTALL_DIR="$HOME/linkedin-agent-2"
 
 if [ -z "$CLIENT_NAME" ] || [ -z "$ANTHROPIC_KEY" ]; then
     echo "Usage: bash setup.sh <client_name> <anthropic_api_key>"
