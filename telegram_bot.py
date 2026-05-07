@@ -13,6 +13,14 @@ def build_app(cfg: dict) -> Application:
     return app
 
 
+def _approval_keyboard(approval_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("✅ Approve", callback_data=f"approve:{approval_id}"),
+        InlineKeyboardButton("✏️ Edit",    callback_data=f"edit:{approval_id}"),
+        InlineKeyboardButton("⏭️ Skip",    callback_data=f"skip:{approval_id}"),
+    ]])
+
+
 async def send_approval(app: Application, approval_id: str, name: str, their_msg: str, draft: str) -> int:
     cfg = app.bot_data["cfg"]
     text = (
@@ -22,22 +30,26 @@ async def send_approval(app: Application, approval_id: str, name: str, their_msg
         f"*Their message:*\n{their_msg}\n\n"
         f"*Proposed reply:*\n{draft}"
     )
-    keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("✅ Approve", callback_data=f"approve:{approval_id}"),
-        InlineKeyboardButton("✏️ Edit",    callback_data=f"edit:{approval_id}"),
-        InlineKeyboardButton("⏭️ Skip",    callback_data=f"skip:{approval_id}"),
-        InlineKeyboardButton("❌ Cancel",  callback_data=f"cancel:{approval_id}"),
-    ]])
     msg = await app.bot.send_message(
         chat_id=cfg["telegram_chat_id"],
         text=text,
         parse_mode="Markdown",
-        reply_markup=keyboard,
+        reply_markup=_approval_keyboard(approval_id),
     )
     return msg.message_id
 
 
-def _base_text(item: dict, agent_name: str) -> str:
+def _approval_text(item: dict, agent_name: str) -> str:
+    return (
+        f"🎖 *{agent_name}*\n"
+        f"📩 *New LinkedIn DM*\n"
+        f"From: *{item['name']}*\n\n"
+        f"*Their message:*\n{item['their_message']}\n\n"
+        f"*Proposed reply:*\n{item['proposed_reply']}"
+    )
+
+
+def _sent_text(item: dict, agent_name: str) -> str:
     return (
         f"🎖 *{agent_name}*\n"
         f"📩 *LinkedIn DM*\n"
@@ -72,7 +84,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         del data["pending_approvals"][approval_id]
         st.save(data)
         await query.edit_message_text(
-            _base_text(item, agent_name) + "\n\n✅ *Approved*",
+            _sent_text(item, agent_name) + "\n\n✅ *Approved*",
             parse_mode="Markdown"
         )
 
@@ -80,7 +92,8 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data["awaiting_edit"] = approval_id
         st.save(data)
         await query.edit_message_text(
-            f"✏️ Type your edited reply for *{item['name']}*:", parse_mode="Markdown"
+            f"✏️ Type your edited reply for *{item['name']}*\.\n\nSend /cancel to go back\.",
+            parse_mode="MarkdownV2"
         )
 
     elif action == "skip":
@@ -88,23 +101,17 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         del data["pending_approvals"][approval_id]
         st.save(data)
         await query.edit_message_text(
-            _base_text(item, agent_name) + "\n\n⏭️ *Skipped — marked as unread*",
+            _sent_text(item, agent_name) + "\n\n⏭️ *Skipped — marked as unread*",
             parse_mode="Markdown"
         )
 
     elif action == "cancel":
         data["awaiting_edit"] = None
         st.save(data)
-        keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("✅ Approve", callback_data=f"approve:{approval_id}"),
-            InlineKeyboardButton("✏️ Edit",    callback_data=f"edit:{approval_id}"),
-            InlineKeyboardButton("⏭️ Skip",    callback_data=f"skip:{approval_id}"),
-            InlineKeyboardButton("❌ Cancel",  callback_data=f"cancel:{approval_id}"),
-        ]])
         await query.edit_message_text(
-            _base_text(item, agent_name) + f"\n\n*Proposed reply:*\n{item['proposed_reply']}",
+            _approval_text(item, agent_name),
             parse_mode="Markdown",
-            reply_markup=keyboard
+            reply_markup=_approval_keyboard(approval_id)
         )
 
 
@@ -130,7 +137,10 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if edited.lower() == "/cancel":
         data["awaiting_edit"] = None
         st.save(data)
-        await update.message.reply_text("❌ Edit cancelled. The message is still pending.")
+        await update.message.reply_text(
+            "❌ Edit cancelled.",
+            parse_mode="Markdown"
+        )
         return
 
     data["approved_queue"].append({
