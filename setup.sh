@@ -57,9 +57,14 @@ EOF
 if [ ! -d "$INSTALL_DIR/venv" ]; then
     echo "Installing Python dependencies..."
     python3 -m venv "$INSTALL_DIR/venv"
-    source "$INSTALL_DIR/venv/bin/activate"
-    pip install -r "$INSTALL_DIR/requirements.txt" --quiet
 fi
+
+source "$INSTALL_DIR/venv/bin/activate"
+pip install -r "$INSTALL_DIR/requirements.txt" --quiet
+
+# Install Playwright browser
+echo "Installing browser..."
+playwright install chromium --quiet 2>/dev/null || python3 -m playwright install chromium
 
 # Check for config files
 CONFIG_FILE="$INSTALL_DIR/clients/$CLIENT_NAME/config.json"
