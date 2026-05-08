@@ -1,16 +1,61 @@
 from datetime import datetime, timezone
+import os
+import signal
 import state as st
 import examples as ex
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters, ContextTypes
+
+
+def _allowed(update: Update, cfg: dict) -> bool:
+    allowed = {cfg["telegram_chat_id"], cfg.get("billing_chat_id")}
+    return update.effective_chat.id in allowed
 
 
 def build_app(cfg: dict) -> Application:
     app = Application.builder().token(cfg["telegram_bot_token"]).build()
     app.add_handler(CallbackQueryHandler(on_callback))
+    app.add_handler(CommandHandler("restart", cmd_restart))
+    app.add_handler(CommandHandler("stop", cmd_stop))
+    app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
     app.bot_data["cfg"] = cfg
     return app
+
+
+async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cfg = context.bot_data["cfg"]
+    if not _allowed(update, cfg):
+        return
+    data = st.load()
+    pending = len(data.get("pending_approvals", {}))
+    total = data.get("total_sent", 0)
+    names = [v["name"] for v in data.get("pending_approvals", {}).values()]
+    pending_str = "\n".join(f"  • {n}" for n in names) if names else "  None"
+    await update.message.reply_text(
+        f"🎖 *{cfg['agent_name']} Status*\n\n"
+        f"Total sent: *{total}*\n"
+        f"Pending approvals: *{pending}*\n{pending_str}",
+        parse_mode="Markdown",
+    )
+
+
+async def cmd_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cfg = context.bot_data["cfg"]
+    if not _allowed(update, cfg):
+        return
+    await update.message.reply_text("🔄 Restarting agent, back in ~30 seconds...")
+    os.kill(os.getpid(), signal.SIGTERM)
+
+
+async def cmd_stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cfg = context.bot_data["cfg"]
+    if not _allowed(update, cfg):
+        return
+    await update.message.reply_text("🛑 Stopping agent. Send /restart from the Mac to start it again.")
+    client_name = cfg["client_name"]
+    plist = os.path.expanduser(f"~/Library/LaunchAgents/digital.rooney.{client_name}.plist")
+    os.system(f"launchctl unload {plist}")
 
 
 def _approval_keyboard(approval_id: str) -> InlineKeyboardMarkup:
