@@ -318,7 +318,7 @@ async def check_pending_reminders(tg_app, cfg: dict):
         if age >= reminder_threshold and (time_since_reminder is None or time_since_reminder >= reminder_threshold):
             name = approval.get("name", "someone")
             await tg_app.bot.send_message(
-                chat_id=cfg["telegram_chat_id"],
+                chat_id=cfg.get("billing_chat_id", cfg["telegram_chat_id"]),
                 text=f"⏰ Reminder: you have a message waiting for approval for *{name}* that has been sitting for over 3 hours. Scroll up and tap Approve, Edit, or Skip.",
                 parse_mode="Markdown",
             )
