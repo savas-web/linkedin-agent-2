@@ -288,6 +288,7 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
                 "their_message": their_last,
                 "proposed_reply": reply,
                 "tg_message_id": tg_msg_id,
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
             st.save(data)
             remaining = cfg["auto_threshold"] - total_sent
@@ -295,6 +296,35 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
             actioned = True
 
     return actioned
+
+
+async def check_pending_reminders(tg_app, cfg: dict):
+    data = st.load()
+    pending = data.get("pending_approvals", {})
+    now = datetime.now(timezone.utc)
+    reminder_threshold = 3 * 3600
+
+    for approval_id, approval in pending.items():
+        created_at = approval.get("created_at")
+        if not created_at:
+            continue
+        age = (now - datetime.fromisoformat(created_at)).total_seconds()
+        last_reminded = approval.get("last_reminded")
+        if last_reminded:
+            time_since_reminder = (now - datetime.fromisoformat(last_reminded)).total_seconds()
+        else:
+            time_since_reminder = None
+
+        if age >= reminder_threshold and (time_since_reminder is None or time_since_reminder >= reminder_threshold):
+            name = approval.get("name", "someone")
+            await tg_app.bot.send_message(
+                chat_id=cfg["telegram_chat_id"],
+                text=f"⏰ Reminder: you have a message waiting for approval for *{name}* that has been sitting for over 3 hours. Scroll up and tap Approve, Edit, or Skip.",
+                parse_mode="Markdown",
+            )
+            data["pending_approvals"][approval_id]["last_reminded"] = now.isoformat()
+
+    st.save(data)
 
 
 async def main():
@@ -385,6 +415,7 @@ async def main():
             await flush_unread_queue(browser)
             await flush_approved_queue(browser, cfg)
             await process_inbox(browser, tg_app, cfg)
+            await check_pending_reminders(tg_app, cfg)
             await send_weekly_report(tg_app, cfg)
             await send_heartbeat(cfg)
 
