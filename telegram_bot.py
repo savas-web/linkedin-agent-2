@@ -91,9 +91,13 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == "edit":
         data["awaiting_edit"] = approval_id
         st.save(data)
+        cancel_keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("❌ Cancel", callback_data=f"cancel:{approval_id}"),
+        ]])
         await query.edit_message_text(
-            f"✏️ Type your edited reply for *{item['name']}*. Send /cancel to go back.",
-            parse_mode="Markdown"
+            _approval_text(item, agent_name) + "\n\n✏️ *Type your edited reply in this chat:*",
+            parse_mode="Markdown",
+            reply_markup=cancel_keyboard,
         )
 
     elif action == "skip":
