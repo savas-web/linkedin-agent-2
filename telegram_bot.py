@@ -5,6 +5,11 @@ import state as st
 import examples as ex
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.helpers import escape_markdown
+
+
+def _esc(text: str) -> str:
+    return escape_markdown(str(text), version=2)
 
 
 def _allowed(update: Update, cfg: dict) -> bool:
@@ -36,7 +41,7 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎖 *{cfg['agent_name']} Status*\n\n"
         f"Total sent: *{total}*\n"
         f"Pending approvals: *{pending}*\n{pending_str}",
-        parse_mode="Markdown",
+        parse_mode="MarkdownV2",
     )
 
 
@@ -69,16 +74,16 @@ def _approval_keyboard(approval_id: str) -> InlineKeyboardMarkup:
 async def send_approval(app: Application, approval_id: str, name: str, their_msg: str, draft: str) -> int:
     cfg = app.bot_data["cfg"]
     text = (
-        f"🎖 *{cfg['agent_name']}*\n"
+        f"🎖 *{_esc(cfg['agent_name'])}*\n"
         f"📩 *New LinkedIn DM*\n"
-        f"From: *{name}*\n\n"
-        f"*Their message:*\n{their_msg}\n\n"
-        f"*Proposed reply:*\n{draft}"
+        f"From: *{_esc(name)}*\n\n"
+        f"*Their message:*\n{_esc(their_msg)}\n\n"
+        f"*Proposed reply:*\n{_esc(draft)}"
     )
     msg = await app.bot.send_message(
         chat_id=cfg["telegram_chat_id"],
         text=text,
-        parse_mode="Markdown",
+        parse_mode="MarkdownV2",
         reply_markup=_approval_keyboard(approval_id),
     )
     return msg.message_id
@@ -86,21 +91,21 @@ async def send_approval(app: Application, approval_id: str, name: str, their_msg
 
 def _approval_text(item: dict, agent_name: str) -> str:
     return (
-        f"🎖 *{agent_name}*\n"
+        f"🎖 *{_esc(agent_name)}*\n"
         f"📩 *New LinkedIn DM*\n"
-        f"From: *{item['name']}*\n\n"
-        f"*Their message:*\n{item['their_message']}\n\n"
-        f"*Proposed reply:*\n{item['proposed_reply']}"
+        f"From: *{_esc(item['name'])}*\n\n"
+        f"*Their message:*\n{_esc(item['their_message'])}\n\n"
+        f"*Proposed reply:*\n{_esc(item['proposed_reply'])}"
     )
 
 
 def _sent_text(item: dict, agent_name: str) -> str:
     return (
-        f"🎖 *{agent_name}*\n"
+        f"🎖 *{_esc(agent_name)}*\n"
         f"📩 *LinkedIn DM*\n"
-        f"From: *{item['name']}*\n\n"
-        f"*Their message:*\n{item['their_message']}\n\n"
-        f"*Reply sent:*\n{item['proposed_reply']}"
+        f"From: *{_esc(item['name'])}*\n\n"
+        f"*Their message:*\n{_esc(item['their_message'])}\n\n"
+        f"*Reply sent:*\n{_esc(item['proposed_reply'])}"
     )
 
 
@@ -130,7 +135,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         st.save(data)
         await query.edit_message_text(
             _sent_text(item, agent_name) + "\n\n✅ *Approved*",
-            parse_mode="Markdown"
+            parse_mode="MarkdownV2"
         )
 
     elif action == "edit":
@@ -141,7 +146,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]])
         await query.edit_message_text(
             _approval_text(item, agent_name) + "\n\n✏️ *Type your edited reply in this chat:*",
-            parse_mode="Markdown",
+            parse_mode="MarkdownV2",
             reply_markup=cancel_keyboard,
         )
 
@@ -151,7 +156,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         st.save(data)
         await query.edit_message_text(
             _sent_text(item, agent_name) + "\n\n⏭️ *Skipped — marked as unread*",
-            parse_mode="Markdown"
+            parse_mode="MarkdownV2"
         )
 
     elif action == "cancel":
@@ -159,7 +164,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         st.save(data)
         await query.edit_message_text(
             _approval_text(item, agent_name),
-            parse_mode="Markdown",
+            parse_mode="MarkdownV2",
             reply_markup=_approval_keyboard(approval_id)
         )
 
@@ -188,7 +193,7 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         st.save(data)
         await update.message.reply_text(
             "❌ Edit cancelled.",
-            parse_mode="Markdown"
+            parse_mode="MarkdownV2"
         )
         return
 
@@ -209,5 +214,5 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"✅ Edited reply queued for *{item['name']}*! 🧠 Saved as learning example.",
-        parse_mode="Markdown"
+        parse_mode="MarkdownV2"
     )
