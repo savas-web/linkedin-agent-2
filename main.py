@@ -315,7 +315,7 @@ async def check_pending_reminders(tg_app, cfg: dict):
         else:
             time_since_reminder = None
 
-        if age >= reminder_threshold and (time_since_reminder is None or time_since_reminder >= reminder_threshold):
+        if age >= reminder_threshold and last_reminded is None:
             name = approval.get("name", "someone")
             await tg_app.bot.send_message(
                 chat_id=cfg.get("billing_chat_id", cfg["telegram_chat_id"]),
