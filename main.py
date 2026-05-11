@@ -185,6 +185,7 @@ async def flush_approved_queue(browser: LinkedInBrowser, cfg: dict):
         success = await browser.send_message(thread_id, message)
         if success:
             record_sent(thread_id, message)
+            an.record_agent_sent(thread_id)
             data = st.load()
             data["total_sent"] += 1
             data["weekly_sent"] = data.get("weekly_sent", 0) + 1
@@ -296,6 +297,51 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
             actioned = True
 
     return actioned
+
+
+async def check_followups(browser: LinkedInBrowser, tg_app, cfg: dict):
+    max_fu = cfg.get("max_follow_ups", 0)
+    fu_days = cfg.get("follow_up_days", 3)
+    if not max_fu:
+        return
+
+    candidates = an.get_followup_candidates(max_fu, fu_days)
+    if not candidates:
+        return
+
+    data = st.load()
+    pending_threads = {v["thread_id"] for v in data.get("pending_approvals", {}).values()}
+
+    for candidate in candidates:
+        thread_id = candidate["thread_id"]
+        name = candidate["name"]
+        if thread_id in pending_threads:
+            continue
+
+        print(f"  🔁 Follow-up candidate: {name}")
+        messages = await browser.get_conversation_messages(thread_id)
+        if not messages or messages[-1]["role"] == "user":
+            continue
+
+        reply = generate_reply(messages, cfg=cfg)
+        if not reply:
+            continue
+
+        approval_id = uuid.uuid4().hex[:8]
+        tg_msg_id = await send_approval(tg_app, approval_id, name, messages[-1]["content"], reply)
+
+        data = st.load()
+        data["pending_approvals"][approval_id] = {
+            "thread_id": thread_id,
+            "name": name,
+            "their_message": messages[-1]["content"],
+            "proposed_reply": reply,
+            "tg_message_id": tg_msg_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        st.save(data)
+        an.record_followup(thread_id)
+        print(f"  ✅ Follow-up queued for {name}")
 
 
 async def check_pending_reminders(tg_app, cfg: dict):
@@ -415,6 +461,7 @@ async def main():
             await flush_unread_queue(browser)
             await flush_approved_queue(browser, cfg)
             await process_inbox(browser, tg_app, cfg)
+            await check_followups(browser, tg_app, cfg)
             await check_pending_reminders(tg_app, cfg)
             await send_weekly_report(tg_app, cfg)
             await send_heartbeat(cfg)

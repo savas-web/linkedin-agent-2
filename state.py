@@ -10,7 +10,6 @@ DEFAULT_STATE = {
     "pending_approvals": {},
     "approved_queue": [],
     "awaiting_edit": None,
-    "reply_cooldown": {},
     "sent_hashes": []
 }
 

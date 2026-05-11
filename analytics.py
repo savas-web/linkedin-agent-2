@@ -55,8 +55,46 @@ def update_conversation(thread_id: str, name: str, messages: list, calendly_link
         "messages_sent": len(our),
         "messages_received": len(theirs),
         "stage": stage,
+        "agent_sent_at": existing.get("agent_sent_at", None),
+        "follow_up_count": existing.get("follow_up_count", 0),
+        "last_follow_up_at": existing.get("last_follow_up_at", None),
     }
     save(data)
+
+
+def record_agent_sent(thread_id: str):
+    data = load()
+    if thread_id in data:
+        data[thread_id]["agent_sent_at"] = datetime.now(timezone.utc).isoformat()
+        save(data)
+
+
+def record_followup(thread_id: str):
+    data = load()
+    if thread_id in data:
+        data[thread_id]["follow_up_count"] = data[thread_id].get("follow_up_count", 0) + 1
+        data[thread_id]["last_follow_up_at"] = datetime.now(timezone.utc).isoformat()
+        save(data)
+
+
+def get_followup_candidates(max_follow_ups: int, follow_up_days: int) -> list:
+    data = load()
+    now = datetime.now(timezone.utc)
+    threshold = follow_up_days * 86400
+    candidates = []
+    for thread_id, conv in data.items():
+        if not conv.get("agent_sent_at"):
+            continue
+        if conv.get("follow_up_count", 0) >= max_follow_ups:
+            continue
+        reference = conv.get("last_follow_up_at") or conv.get("agent_sent_at")
+        try:
+            age = (now - datetime.fromisoformat(reference)).total_seconds()
+        except Exception:
+            continue
+        if age >= threshold:
+            candidates.append({"thread_id": thread_id, "name": conv.get("name", "")})
+    return candidates
 
 
 def get_summary() -> dict:
