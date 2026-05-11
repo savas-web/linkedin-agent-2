@@ -4,6 +4,26 @@ import examples as ex
 client = anthropic.Anthropic()
 
 
+def generate_followup(last_message: str, name: str, cfg: dict = None) -> str:
+    cfg = cfg or {}
+    claude_model = cfg.get("claude_model", "claude-sonnet-4-6")
+    system = (
+        f"You are writing a single casual follow-up LinkedIn message on behalf of {cfg.get('agent_name', 'the user')}.\n\n"
+        f"The last message sent to {name} was:\n\"{last_message}\"\n\n"
+        f"They have not replied. Write one short, warm, human follow-up nudge. "
+        f"Examples of the right tone: 'Hey {name}, just wanted to bump this up in case it got buried!' or "
+        f"'Hey {name}, was just thinking about my last message — still keen to connect if the timing works?' "
+        f"Keep it to 1 sentence. Never repeat or paraphrase the last message. No sales language."
+    )
+    response = client.messages.create(
+        model=claude_model,
+        max_tokens=100,
+        system=system,
+        messages=[{"role": "user", "content": f"Write the follow-up message for {name}."}]
+    )
+    return response.content[0].text.strip()
+
+
 def generate_reply(conversation: list[dict], profile: dict = None, cfg: dict = None):
     if not conversation:
         return None

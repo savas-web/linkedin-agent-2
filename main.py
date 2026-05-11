@@ -18,7 +18,7 @@ import state as st
 import examples as ex
 import analytics as an
 from linkedin_browser import LinkedInBrowser
-from claude_agent import generate_reply
+from claude_agent import generate_reply, generate_followup
 from telegram_bot import build_app, send_approval, send_followup_approval
 import json
 
@@ -323,11 +323,11 @@ async def check_followups(browser: LinkedInBrowser, tg_app, cfg: dict):
         if not messages or messages[-1]["role"] == "user":
             continue
 
-        reply = generate_reply(messages, cfg=cfg)
+        last_sent = messages[-1]["content"]
+        reply = generate_followup(last_sent, name, cfg=cfg)
         if not reply:
             continue
 
-        last_sent = messages[-1]["content"]
         approval_id = uuid.uuid4().hex[:8]
         tg_msg_id = await send_followup_approval(tg_app, approval_id, name, last_sent, reply)
 
