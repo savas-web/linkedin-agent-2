@@ -39,10 +39,10 @@ def generate_reply(conversation: list[dict], profile: dict = None, cfg: dict = N
         for m in trailing:
             system += f"{agent_name}: {m['content']}\n"
         system += (
-            "Write a SHORT, casual follow-up message. "
-            "It must be completely different from the last message sent — do not repeat it or paraphrase it. "
-            "Keep it under 2 sentences. Light, human, no pressure. "
-            "Reference something specific from earlier in the conversation if possible.\n"
+            "Write a very short, casual follow-up nudge. "
+            "The tone should feel like a real person just checking in — something like 'Hey [name], just wanted to bump this up in case it got lost!' or 'Hey [name], was just thinking about my last message — still keen to connect if the timing works?' "
+            "Keep it to 1 or 2 sentences max. Warm, zero pressure, completely natural. "
+            "Never repeat or paraphrase the last message. Never sound salesy or formal.\n"
         )
     system += ex.build_examples_prompt(agent_name)
 
