@@ -169,11 +169,13 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif action == "skip":
-        data.setdefault("mark_unread_queue", []).append(item["thread_id"])
+        if not item.get("is_followup"):
+            data.setdefault("mark_unread_queue", []).append(item["thread_id"])
         del data["pending_approvals"][approval_id]
         st.save(data)
+        label = "⏭️ *Follow\\-up skipped*" if item.get("is_followup") else "⏭️ *Skipped — marked as unread*"
         await query.edit_message_text(
-            _sent_text(item, agent_name) + "\n\n⏭️ *Skipped — marked as unread*",
+            _sent_text(item, agent_name) + f"\n\n{label}",
             parse_mode="MarkdownV2"
         )
 
