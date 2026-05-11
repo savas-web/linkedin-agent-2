@@ -89,6 +89,24 @@ async def send_approval(app: Application, approval_id: str, name: str, their_msg
     return msg.message_id
 
 
+async def send_followup_approval(app: Application, approval_id: str, name: str, last_sent: str, draft: str) -> int:
+    cfg = app.bot_data["cfg"]
+    text = (
+        f"🎖 *{_esc(cfg['agent_name'])}*\n"
+        f"🔁 *Follow\\-up*\n"
+        f"For: *{_esc(name)}*\n\n"
+        f"*Our last message:*\n{_esc(last_sent)}\n\n"
+        f"*Proposed follow\\-up:*\n{_esc(draft)}"
+    )
+    msg = await app.bot.send_message(
+        chat_id=cfg["telegram_chat_id"],
+        text=text,
+        parse_mode="MarkdownV2",
+        reply_markup=_approval_keyboard(approval_id),
+    )
+    return msg.message_id
+
+
 def _approval_text(item: dict, agent_name: str) -> str:
     return (
         f"🎖 *{_esc(agent_name)}*\n"

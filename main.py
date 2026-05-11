@@ -19,7 +19,7 @@ import examples as ex
 import analytics as an
 from linkedin_browser import LinkedInBrowser
 from claude_agent import generate_reply
-from telegram_bot import build_app, send_approval
+from telegram_bot import build_app, send_approval, send_followup_approval
 import json
 
 
@@ -327,16 +327,18 @@ async def check_followups(browser: LinkedInBrowser, tg_app, cfg: dict):
         if not reply:
             continue
 
+        last_sent = messages[-1]["content"]
         approval_id = uuid.uuid4().hex[:8]
-        tg_msg_id = await send_approval(tg_app, approval_id, name, messages[-1]["content"], reply)
+        tg_msg_id = await send_followup_approval(tg_app, approval_id, name, last_sent, reply)
 
         data = st.load()
         data["pending_approvals"][approval_id] = {
             "thread_id": thread_id,
             "name": name,
-            "their_message": messages[-1]["content"],
+            "their_message": last_sent,
             "proposed_reply": reply,
             "tg_message_id": tg_msg_id,
+            "is_followup": True,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         st.save(data)

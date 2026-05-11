@@ -35,10 +35,15 @@ def generate_reply(conversation: list[dict], profile: dict = None, cfg: dict = N
             system += f"{agent_name}: {m['content']}\n"
         system += "The conversation below starts with the prospect's reply to the above.\n"
     if trailing:
-        system += f"\n\n{agent_name.upper()} ALREADY SENT THIS AS THE LAST MESSAGE (prospect has not replied yet):\n"
+        system += f"\n\n{agent_name.upper()} ALREADY SENT THIS AS THE LAST MESSAGE AND THE PROSPECT HAS NOT REPLIED:\n"
         for m in trailing:
             system += f"{agent_name}: {m['content']}\n"
-        system += "Write a natural follow-up message given the above.\n"
+        system += (
+            "Write a SHORT, casual follow-up message. "
+            "It must be completely different from the last message sent — do not repeat it or paraphrase it. "
+            "Keep it under 2 sentences. Light, human, no pressure. "
+            "Reference something specific from earlier in the conversation if possible.\n"
+        )
     system += ex.build_examples_prompt(agent_name)
 
     if profile:
