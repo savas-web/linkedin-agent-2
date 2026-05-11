@@ -211,10 +211,7 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if edited.lower() == "/cancel":
         data["awaiting_edit"] = None
         st.save(data)
-        await update.message.reply_text(
-            "❌ Edit cancelled.",
-            parse_mode="MarkdownV2"
-        )
+        await update.message.reply_text("❌ Edit cancelled.")
         return
 
     data["approved_queue"].append({
@@ -233,6 +230,6 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     await update.message.reply_text(
-        f"✅ Edited reply queued for *{item['name']}*! 🧠 Saved as learning example.",
+        f"✅ Edited reply queued for *{_esc(item['name'])}*\\! 🧠 Saved as learning example\\.",
         parse_mode="MarkdownV2"
     )
