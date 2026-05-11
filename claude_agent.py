@@ -20,12 +20,25 @@ def generate_reply(conversation: list[dict], profile: dict = None, cfg: dict = N
     if not messages:
         return None
 
+    trailing = []
+    while messages and messages[-1]["role"] == "assistant":
+        trailing.insert(0, messages.pop())
+    if not messages and not trailing:
+        return None
+    if not messages:
+        messages = [{"role": "user", "content": "[No reply from prospect yet]"}]
+
     system = system_prompt
     if leading:
         system += f"\n\nFIRST MESSAGE(S) {agent_name.upper()} ALREADY SENT BEFORE THE PROSPECT REPLIED:\n"
         for m in leading:
             system += f"{agent_name}: {m['content']}\n"
         system += "The conversation below starts with the prospect's reply to the above.\n"
+    if trailing:
+        system += f"\n\n{agent_name.upper()} ALREADY SENT THIS AS THE LAST MESSAGE (prospect has not replied yet):\n"
+        for m in trailing:
+            system += f"{agent_name}: {m['content']}\n"
+        system += "Write a natural follow-up message given the above.\n"
     system += ex.build_examples_prompt(agent_name)
 
     if profile:
