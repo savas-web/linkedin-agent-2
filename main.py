@@ -487,6 +487,19 @@ async def main():
                     )
                 session_alert_sent = False
 
+            shutdown_date = cfg.get("shutdown_date")
+            if shutdown_date and datetime.now(ZoneInfo("Europe/Amsterdam")).date() >= datetime.fromisoformat(shutdown_date).date():
+                print(f"  🛑 Shutdown date {shutdown_date} reached. Stopping agent.")
+                await tg_app.bot.send_message(
+                    chat_id=cfg["telegram_chat_id"],
+                    text=f"🛑 *{cfg['agent_name']}*\n\nYour subscription has ended and the agent has been stopped. Thank you for using Rooney Digital!",
+                    parse_mode="Markdown",
+                )
+                client_name = cfg["client_name"]
+                plist = os.path.expanduser(f"~/Library/LaunchAgents/digital.rooney.{client_name}.plist")
+                os.system(f"launchctl unload {plist}")
+                break
+
             await flush_unread_queue(browser)
             await flush_approved_queue(browser, cfg)
             await process_inbox(browser, tg_app, cfg)
