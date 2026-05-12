@@ -118,6 +118,14 @@ def _approval_text(item: dict, agent_name: str) -> str:
 
 
 def _sent_text(item: dict, agent_name: str) -> str:
+    if item.get("is_followup"):
+        return (
+            f"🎖 *{_esc(agent_name)}*\n"
+            f"🔁 *Follow\\-up*\n"
+            f"For: *{_esc(item['name'])}*\n\n"
+            f"*Our last message:*\n{_esc(item['their_message'])}\n\n"
+            f"*Follow\\-up sent:*\n{_esc(item['proposed_reply'])}"
+        )
     return (
         f"🎖 *{_esc(agent_name)}*\n"
         f"📩 *LinkedIn DM*\n"
@@ -147,7 +155,8 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data["approved_queue"].append({
             "thread_id": item["thread_id"],
             "message": item["proposed_reply"],
-            "approved_at": datetime.now(timezone.utc).isoformat()
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "is_followup": item.get("is_followup", False),
         })
         del data["pending_approvals"][approval_id]
         st.save(data)

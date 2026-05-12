@@ -39,10 +39,11 @@ def _detect_stage(messages: list, calendly_link: str) -> str:
     return "replied"
 
 
-def update_conversation(thread_id: str, name: str, messages: list, calendly_link: str = ""):
+def update_conversation(thread_id: str, name: str, messages: list, calendly_link: str = "", profile: dict = None):
     data = load()
     now = datetime.now(timezone.utc).isoformat()
     existing = data.get(thread_id, {})
+    profile = profile or {}
 
     our = [m for m in messages if m["role"] == "assistant"]
     theirs = [m for m in messages if m["role"] == "user"]
@@ -58,6 +59,9 @@ def update_conversation(thread_id: str, name: str, messages: list, calendly_link
         "agent_sent_at": existing.get("agent_sent_at", None),
         "follow_up_count": existing.get("follow_up_count", 0),
         "last_follow_up_at": existing.get("last_follow_up_at", None),
+        "profile_url": profile.get("profile_url") or existing.get("profile_url"),
+        "headline": profile.get("headline") or existing.get("headline"),
+        "recent_posts": profile.get("recent_posts") or existing.get("recent_posts"),
     }
     save(data)
 
@@ -93,8 +97,22 @@ def get_followup_candidates(max_follow_ups: int, follow_up_days: int) -> list:
         except Exception:
             continue
         if age >= threshold:
-            candidates.append({"thread_id": thread_id, "name": conv.get("name", "")})
+            candidates.append({
+                "thread_id": thread_id,
+                "name": conv.get("name", ""),
+                "profile": {
+                    "headline": conv.get("headline"),
+                    "recent_posts": conv.get("recent_posts"),
+                },
+            })
     return candidates
+
+
+def mark_dismissed(thread_id: str):
+    data = load()
+    if thread_id in data:
+        data[thread_id]["follow_up_count"] = 99
+        save(data)
 
 
 def get_summary() -> dict:

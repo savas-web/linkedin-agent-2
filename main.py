@@ -13,12 +13,21 @@ import httpx
 logging.getLogger("telegram.ext._utils.networkloop").setLevel(logging.CRITICAL)
 logging.getLogger("telegram").setLevel(logging.CRITICAL)
 
+# Load .env as fallback for any vars not already in the environment (e.g. when plist was installed without them)
+_env_path = Path(__file__).parent / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().splitlines():
+        if "=" in _line and not _line.startswith("#"):
+            _k, _v = _line.split("=", 1)
+            if _k.strip() not in os.environ:
+                os.environ[_k.strip()] = _v.strip()
+
 import config as cfg_module
 import state as st
 import examples as ex
 import analytics as an
 from linkedin_browser import LinkedInBrowser
-from claude_agent import generate_reply, generate_followup
+from claude_agent import generate_reply, generate_followup, should_followup
 from telegram_bot import build_app, send_approval, send_followup_approval
 import json
 
@@ -161,7 +170,7 @@ async def flush_approved_queue(browser: LinkedInBrowser, cfg: dict):
                 continue
 
         messages = await browser.get_conversation_messages(thread_id)
-        if messages and messages[-1]["role"] == "assistant":
+        if messages and messages[-1]["role"] == "assistant" and not item.get("is_followup"):
             print(f"  ⏭️  Skipping approved message for thread {thread_id} — we already sent the last message manually.")
             data = st.load()
             data["approved_queue"] = [
@@ -250,7 +259,7 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
         log[thread_id] = {"name": name, "profile_url": profile_url or "", "messages": messages}
         log_path.write_text(json.dumps(log, indent=2))
 
-        an.update_conversation(thread_id, name, messages, cfg.get("calendly_link", ""))
+        an.update_conversation(thread_id, name, messages, cfg.get("calendly_link", ""), profile=profile)
 
         print(f"  🤖 Generating reply for {name}...")
         reply = generate_reply(messages, profile, cfg)
@@ -308,6 +317,7 @@ async def check_followups(browser: LinkedInBrowser, tg_app, cfg: dict):
     candidates = an.get_followup_candidates(max_fu, fu_days)
     if not candidates:
         return
+    candidates = candidates[:3]
 
     data = st.load()
     pending_threads = {v["thread_id"] for v in data.get("pending_approvals", {}).values()}
@@ -323,8 +333,25 @@ async def check_followups(browser: LinkedInBrowser, tg_app, cfg: dict):
         if not messages or messages[-1]["role"] == "user":
             continue
 
+        if not should_followup(messages, cfg):
+            print(f"  ⛔ {name} — conversation closed/dismissed, skipping permanently.")
+            an.mark_dismissed(thread_id)
+            continue
+
+        profile = candidate.get("profile", {}) or {}
+        if not profile.get("recent_posts"):
+            try:
+                profile_url = await browser.get_profile_url_from_conversation()
+                if profile_url:
+                    posts = await browser.get_recent_posts(profile_url)
+                    if posts:
+                        profile["recent_posts"] = posts
+                        profile["profile_url"] = profile_url
+            except Exception:
+                pass
+        profile["name"] = name
         last_sent = messages[-1]["content"]
-        reply = generate_followup(last_sent, name, cfg=cfg)
+        reply = generate_followup(messages, name, cfg=cfg, profile=profile)
         if not reply:
             continue
 

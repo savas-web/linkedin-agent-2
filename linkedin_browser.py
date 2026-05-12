@@ -135,6 +135,25 @@ class LinkedInBrowser:
             print(f"⚠️  Error fetching conversations: {e}")
             return []
 
+    async def get_recent_posts(self, profile_url: str) -> list:
+        if not profile_url:
+            return []
+        try:
+            await self.page.goto(f"{profile_url}/recent-activity/all/", wait_until="domcontentloaded")
+            await asyncio.sleep(2)
+            post_els = await self.page.query_selector_all(".feed-shared-update-v2__description span[aria-hidden='true']")
+            posts = []
+            for el in post_els[:3]:
+                text = (await el.inner_text()).strip()
+                if text and len(text) > 30:
+                    posts.append(text[:300])
+            return posts
+        except Exception:
+            return []
+
+    async def get_profile_url_from_conversation(self) -> str:
+        return await self._get_profile_url_from_conversation()
+
     async def _get_profile_url_from_conversation(self) -> str:
         try:
             # The conversation header has a link to the person's profile
