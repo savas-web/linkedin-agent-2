@@ -487,7 +487,9 @@ async def main():
                     )
                 session_alert_sent = False
 
-            shutdown_date = cfg.get("shutdown_date")
+            _sd_file = Path(__file__).parent / "shutdown_dates.json"
+            _sd_map = json.loads(_sd_file.read_text()) if _sd_file.exists() else {}
+            shutdown_date = _sd_map.get(cfg["client_name"]) or cfg.get("shutdown_date")
             if shutdown_date and datetime.now(ZoneInfo("Europe/Amsterdam")).date() >= datetime.fromisoformat(shutdown_date).date():
                 print(f"  🛑 Shutdown date {shutdown_date} reached. Stopping agent.")
                 await tg_app.bot.send_message(
