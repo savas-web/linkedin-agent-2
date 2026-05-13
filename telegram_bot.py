@@ -71,6 +71,10 @@ def _approval_keyboard(approval_id: str) -> InlineKeyboardMarkup:
     ]])
 
 
+def _approval_chat_id(cfg: dict) -> int:
+    return cfg.get("billing_chat_id") or cfg["telegram_chat_id"]
+
+
 async def send_approval(app: Application, approval_id: str, name: str, their_msg: str, draft: str) -> int:
     cfg = app.bot_data["cfg"]
     text = (
@@ -81,7 +85,7 @@ async def send_approval(app: Application, approval_id: str, name: str, their_msg
         f"*Proposed reply:*\n{_esc(draft)}"
     )
     msg = await app.bot.send_message(
-        chat_id=cfg["telegram_chat_id"],
+        chat_id=_approval_chat_id(cfg),
         text=text,
         parse_mode="MarkdownV2",
         reply_markup=_approval_keyboard(approval_id),
@@ -99,7 +103,7 @@ async def send_followup_approval(app: Application, approval_id: str, name: str, 
         f"*Proposed follow\\-up:*\n{_esc(draft)}"
     )
     msg = await app.bot.send_message(
-        chat_id=cfg["telegram_chat_id"],
+        chat_id=_approval_chat_id(cfg),
         text=text,
         parse_mode="MarkdownV2",
         reply_markup=_approval_keyboard(approval_id),
@@ -200,7 +204,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cfg = context.bot_data["cfg"]
-    if update.effective_chat.id != cfg["telegram_chat_id"]:
+    if update.effective_chat.id not in {cfg["telegram_chat_id"], _approval_chat_id(cfg)}:
         return
 
     data = st.load()
