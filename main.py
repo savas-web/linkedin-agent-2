@@ -32,8 +32,8 @@ from telegram_bot import build_app, send_approval, send_followup_approval
 import json
 
 
-DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "")
-DASHBOARD_API_KEY = os.environ.get("DASHBOARD_API_KEY", "")
+DASHBOARD_URL = os.environ.get("DASHBOARD_URL") or "https://rooney-control-tower.up.railway.app"
+DASHBOARD_API_KEY = os.environ.get("DASHBOARD_API_KEY") or "rd-secret-2026"
 OPERATOR_BOT_TOKEN = os.environ.get("OPERATOR_TELEGRAM_BOT_TOKEN", "")
 OPERATOR_CHAT_ID = os.environ.get("OPERATOR_TELEGRAM_CHAT_ID", "")
 
