@@ -309,10 +309,8 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
 
 
 async def check_followups(browser: LinkedInBrowser, tg_app, cfg: dict):
-    max_fu = cfg.get("max_follow_ups", 0)
+    max_fu = cfg.get("max_follow_ups", 2)
     fu_days = cfg.get("follow_up_days", 3)
-    if not max_fu:
-        return
 
     candidates = an.get_followup_candidates(max_fu, fu_days)
     if not candidates:
@@ -410,6 +408,7 @@ async def main():
     st.init(client_dir)
     ex.init(client_dir)
     an.init(client_dir)
+    an.backfill_agent_sent()
 
     print(f"🚀 LinkedIn Appointment Setter — starting up ({client_name})...")
 

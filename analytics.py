@@ -108,6 +108,18 @@ def get_followup_candidates(max_follow_ups: int, follow_up_days: int) -> list:
     return candidates
 
 
+def backfill_agent_sent():
+    data = load()
+    changed = False
+    for thread_id, conv in data.items():
+        if not conv.get("agent_sent_at") and conv.get("messages_sent", 0) > 0:
+            data[thread_id]["agent_sent_at"] = conv.get("last_activity")
+            changed = True
+    if changed:
+        save(data)
+        print(f"  ✅ Backfilled agent_sent_at for eligible conversations.")
+
+
 def mark_dismissed(thread_id: str):
     data = load()
     if thread_id in data:
