@@ -484,6 +484,11 @@ async def main():
         while True:
             print("─── Tick ───────────────────────────────")
 
+            if cfg.get("weekdays_only") and datetime.now().weekday() >= 5:
+                print("  Weekend — skipping tick (weekdays_only)")
+                await asyncio.sleep(poll_interval)
+                continue
+
             if not await browser.is_alive():
                 browser_error_count += 1
                 print(f"  Browser closed (failure {browser_error_count}), restarting...")
