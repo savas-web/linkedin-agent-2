@@ -48,33 +48,37 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_demo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cfg = context.bot_data["cfg"]
-    if not _allowed(update, cfg):
-        return
-    approval_id = f"demo_{uuid.uuid4().hex[:6]}"
-    their_msg = "I know what I need to do but I just cannot seem to actually do it. Does your coaching help with that?"
-    draft = "That is literally the gap most people are stuck in and it is exactly what we work on. Would you be open to a quick 20 minutes just to see if there is anything useful for where you are right now?"
-    data = st.load()
-    data.setdefault("pending_approvals", {})[approval_id] = {
-        "thread_id": "demo_thread",
-        "name": "Sarah Mitchell",
-        "their_message": their_msg,
-        "proposed_reply": draft,
-        "is_followup": False,
-        "is_demo": True,
-    }
-    st.save(data)
-    text = (
-        f"DEMO\n"
-        f"New LinkedIn DM\n"
-        f"From: Sarah Mitchell\n\n"
-        f"Their message:\n{their_msg}\n\n"
-        f"Proposed reply:\n{draft}"
-    )
-    msg = await update.message.reply_text(text, reply_markup=_approval_keyboard(approval_id))
-    data2 = st.load()
-    data2["pending_approvals"][approval_id]["tg_message_id"] = msg.message_id
-    st.save(data2)
+    try:
+        cfg = context.bot_data["cfg"]
+        if not _allowed(update, cfg):
+            await update.message.reply_text("Not allowed.")
+            return
+        approval_id = f"demo_{uuid.uuid4().hex[:6]}"
+        their_msg = "I know what I need to do but I just cannot seem to actually do it. Does your coaching help with that?"
+        draft = "That is literally the gap most people are stuck in and it is exactly what we work on. Would you be open to a quick 20 minutes just to see if there is anything useful for where you are right now?"
+        data = st.load()
+        data.setdefault("pending_approvals", {})[approval_id] = {
+            "thread_id": "demo_thread",
+            "name": "Sarah Mitchell",
+            "their_message": their_msg,
+            "proposed_reply": draft,
+            "is_followup": False,
+            "is_demo": True,
+        }
+        st.save(data)
+        text = (
+            f"DEMO\n"
+            f"New LinkedIn DM\n"
+            f"From: Sarah Mitchell\n\n"
+            f"Their message:\n{their_msg}\n\n"
+            f"Proposed reply:\n{draft}"
+        )
+        msg = await update.message.reply_text(text, reply_markup=_approval_keyboard(approval_id))
+        data2 = st.load()
+        data2["pending_approvals"][approval_id]["tg_message_id"] = msg.message_id
+        st.save(data2)
+    except Exception as e:
+        await update.message.reply_text(f"Demo error: {e}")
 
 
 async def cmd_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
