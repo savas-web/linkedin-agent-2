@@ -28,6 +28,36 @@ import examples as ex
 import analytics as an
 from linkedin_browser import LinkedInBrowser
 from claude_agent import generate_reply, generate_followup, should_followup
+
+NOTION_TOKEN   = os.environ.get("NOTION_TOKEN", "")
+NOTION_DB_ID   = "333075d6-4265-80ff-9696-e53f14238595"
+NOTION_HEADERS = {
+    "Authorization": f"Bearer {NOTION_TOKEN}",
+    "Notion-Version": "2022-06-28",
+    "Content-Type": "application/json",
+}
+
+
+def create_notion_lead(name: str, linkedin_url: str, sent_at: str):
+    if not NOTION_TOKEN:
+        return
+    try:
+        payload = {
+            "parent": {"database_id": NOTION_DB_ID},
+            "properties": {
+                "Lead Name": {"title": [{"text": {"content": name}}]},
+                "LinkedIN ": {"url": linkedin_url or None},
+                "Status": {"status": {"name": "Loom/link/vn sent"}},
+                "LAST FOLLOW UP DATE": {"date": {"start": sent_at[:10]}},
+            },
+        }
+        r = httpx.post("https://api.notion.com/v1/pages", headers=NOTION_HEADERS, json=payload, timeout=10)
+        if r.status_code == 200:
+            print(f"  📋 Notion lead created for {name}")
+        else:
+            print(f"  ⚠️ Notion lead failed ({r.status_code}): {r.text[:200]}")
+    except Exception as e:
+        print(f"  ⚠️ Notion lead error: {e}")
 from telegram_bot import build_app, send_approval, send_followup_approval
 import json
 
@@ -204,6 +234,16 @@ async def flush_approved_queue(browser: LinkedInBrowser, cfg: dict):
             ]
             st.save(data)
             print(f"  ✅ Sent! Total approved+sent: {data['total_sent']}/{cfg['auto_threshold']}")
+
+            # if the message contains the Calendly link, create a Notion lead
+            calendly_link = cfg.get("calendly_link", "")
+            if calendly_link and calendly_link in message:
+                conv = an.load().get(thread_id, {})
+                create_notion_lead(
+                    name=conv.get("name", item.get("name", "Unknown")),
+                    linkedin_url=conv.get("profile_url", ""),
+                    sent_at=datetime.now(timezone.utc).isoformat(),
+                )
 
 
 async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
@@ -417,7 +457,16 @@ async def main():
     await tg_app.bot.delete_webhook(drop_pending_updates=True)
     await asyncio.sleep(2)
     await tg_app.start()
-    await tg_app.updater.start_polling(drop_pending_updates=True)
+    for attempt in range(5):
+        try:
+            await tg_app.updater.start_polling(drop_pending_updates=True)
+            break
+        except Exception as e:
+            if "Conflict" in str(e) and attempt < 4:
+                print(f"Telegram conflict, retrying in 10s (attempt {attempt+1}/5)...")
+                await asyncio.sleep(10)
+            else:
+                raise
     print("✅ Telegram bot running.")
 
     browser = LinkedInBrowser(client_dir)

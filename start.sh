@@ -6,7 +6,7 @@ cd "/Users/savassuner/CLAUDE CODE/linkedin-agent-2"
 
 # Kill any stale Chromium and Python instances, remove profile lock files
 pkill -f "linkedin-agent-2" 2>/dev/null
-sleep 2
+sleep 6
 rm -f linkedin_profile/SingletonLock linkedin_profile/SingletonSocket linkedin_profile/SingletonCookie 2>/dev/null
 
 exec "./venv/bin/python" -u main.py
