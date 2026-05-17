@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import os
 import signal
+import uuid
 import state as st
 import examples as ex
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -23,6 +24,7 @@ def build_app(cfg: dict) -> Application:
     app.add_handler(CommandHandler("restart", cmd_restart))
     app.add_handler(CommandHandler("stop", cmd_stop))
     app.add_handler(CommandHandler("status", cmd_status))
+    app.add_handler(CommandHandler("demo", cmd_demo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
     app.bot_data["cfg"] = cfg
     return app
@@ -43,6 +45,36 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Pending approvals: *{pending}*\n{pending_str}",
         parse_mode="MarkdownV2",
     )
+
+
+async def cmd_demo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cfg = context.bot_data["cfg"]
+    if not _allowed(update, cfg):
+        return
+    approval_id = f"demo_{uuid.uuid4().hex[:6]}"
+    their_msg = "Hey, I've been struggling with the same patterns for years. I know what I need to do but I just can't seem to actually do it. Does your coaching actually help with that?"
+    draft = "That's literally the gap most people are stuck in and it's exactly what we work on. Would you be open to a quick 20 minutes with me just to see if there's anything useful for where you are right now?"
+    data = st.load()
+    data.setdefault("pending_approvals", {})[approval_id] = {
+        "thread_id": "demo_thread",
+        "name": "Sarah Mitchell",
+        "their_message": their_msg,
+        "proposed_reply": draft,
+        "is_followup": False,
+        "is_demo": True,
+    }
+    st.save(data)
+    text = (
+        f"🎖 *{_esc(cfg['agent_name'])}*\n"
+        f"📩 *New LinkedIn DM \\(DEMO\\)*\n"
+        f"From: *{_esc('Sarah Mitchell')}*\n\n"
+        f"*Their message:*\n{_esc(their_msg)}\n\n"
+        f"*Proposed reply:*\n{_esc(draft)}"
+    )
+    msg = await update.message.reply_text(text, parse_mode="MarkdownV2", reply_markup=_approval_keyboard(approval_id))
+    data2 = st.load()
+    data2["pending_approvals"][approval_id]["tg_message_id"] = msg.message_id
+    st.save(data2)
 
 
 async def cmd_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -152,6 +184,14 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     item = pending[approval_id]
 
     if action == "approve":
+        if item.get("is_demo"):
+            del data["pending_approvals"][approval_id]
+            st.save(data)
+            await query.edit_message_text(
+                _sent_text(item, agent_name) + "\n\n✅ *Approved \\(DEMO — nothing sent\\)*",
+                parse_mode="MarkdownV2"
+            )
+            return
         data["approved_queue"].append({
             "thread_id": item["thread_id"],
             "message": item["proposed_reply"],
@@ -237,6 +277,21 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ai_draft=item["proposed_reply"],
         max_sent=edited
     )
+
+    # edit the original approval message to remove the Cancel button
+    tg_msg_id = item.get("tg_message_id")
+    agent_name = cfg["agent_name"]
+    edited_item = {**item, "proposed_reply": edited}
+    if tg_msg_id:
+        try:
+            await context.bot.edit_message_text(
+                chat_id=cfg["telegram_chat_id"],
+                message_id=tg_msg_id,
+                text=_sent_text(edited_item, agent_name) + "\n\n✅ *Sent \\(edited\\)*",
+                parse_mode="MarkdownV2",
+            )
+        except Exception:
+            pass
 
     await update.message.reply_text(
         f"✅ Edited reply queued for *{_esc(item['name'])}*\\! 🧠 Saved as learning example\\.",
