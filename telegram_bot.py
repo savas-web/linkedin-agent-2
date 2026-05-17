@@ -52,8 +52,8 @@ async def cmd_demo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _allowed(update, cfg):
         return
     approval_id = f"demo_{uuid.uuid4().hex[:6]}"
-    their_msg = "Hey, I've been struggling with the same patterns for years. I know what I need to do but I just can't seem to actually do it. Does your coaching actually help with that?"
-    draft = "That's literally the gap most people are stuck in and it's exactly what we work on. Would you be open to a quick 20 minutes with me just to see if there's anything useful for where you are right now?"
+    their_msg = "I know what I need to do but I just cannot seem to actually do it. Does your coaching help with that?"
+    draft = "That is literally the gap most people are stuck in and it is exactly what we work on. Would you be open to a quick 20 minutes just to see if there is anything useful for where you are right now?"
     data = st.load()
     data.setdefault("pending_approvals", {})[approval_id] = {
         "thread_id": "demo_thread",
@@ -65,13 +65,13 @@ async def cmd_demo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     st.save(data)
     text = (
-        f"🎖 *{_esc(cfg['agent_name'])}*\n"
-        f"📩 *New LinkedIn DM \\(DEMO\\)*\n"
-        f"From: *{_esc('Sarah Mitchell')}*\n\n"
-        f"*Their message:*\n{_esc(their_msg)}\n\n"
-        f"*Proposed reply:*\n{_esc(draft)}"
+        f"DEMO\n"
+        f"New LinkedIn DM\n"
+        f"From: Sarah Mitchell\n\n"
+        f"Their message:\n{their_msg}\n\n"
+        f"Proposed reply:\n{draft}"
     )
-    msg = await update.message.reply_text(text, parse_mode="MarkdownV2", reply_markup=_approval_keyboard(approval_id))
+    msg = await update.message.reply_text(text, reply_markup=_approval_keyboard(approval_id))
     data2 = st.load()
     data2["pending_approvals"][approval_id]["tg_message_id"] = msg.message_id
     st.save(data2)
@@ -188,8 +188,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             del data["pending_approvals"][approval_id]
             st.save(data)
             await query.edit_message_text(
-                _sent_text(item, agent_name) + "\n\n✅ *Approved \\(DEMO — nothing sent\\)*",
-                parse_mode="MarkdownV2"
+                f"DEMO\nFrom: {item['name']}\n\nReply that would be sent:\n{item['proposed_reply']}\n\nApproved (nothing actually sent)"
             )
             return
         data["approved_queue"].append({
