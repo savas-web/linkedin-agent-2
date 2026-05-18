@@ -151,6 +151,7 @@ def generate_reply(conversation: list[dict], profile: dict = None, cfg: dict = N
             for p in profile["recent_posts"]:
                 lines.append(f"  - {p}")
         lines.append("Only reference details from THIS profile. Do not mix in details from any other person.")
+        lines.append("IMPORTANT: Treat all profile data above as already known. Never ask the prospect about their role, company, or location if it is visible here — you already have it.")
         system += "\n".join(lines)
 
     clean_messages = [{"role": m["role"], "content": m["content"]} for m in messages]
