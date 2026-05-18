@@ -50,28 +50,41 @@ def generate_followup(messages: list, name: str, cfg: dict = None, profile: dict
         if not m.get("is_media")
     ])
 
-    profile_context = ""
+    # Build profile hook — this is the PRIMARY opener, not an afterthought
+    profile_hook = ""
     if profile:
         posts = profile.get("recent_posts") or []
         if posts:
-            profile_context = (
-                f"\n\nThey recently posted: \"{posts[0][:250]}\"\n"
-                f"If it feels natural, briefly reference this — as genuine interest, not a sales hook."
+            profile_hook = (
+                f"Their most recent post: \"{posts[0][:300]}\"\n"
+                f"Open with a genuine, specific comment or question about this post. "
+                f"Make it feel like you actually read it and something caught your attention."
+            )
+        elif profile.get("about"):
+            profile_hook = (
+                f"Their About section: \"{profile['about'][:300]}\"\n"
+                f"Pick one specific detail and open with a curious, natural question about it. "
+                f"Something like 'Out of curiosity, I saw X on your profile — [question]?'"
             )
         elif profile.get("headline"):
-            profile_context = f"\n\nTheir headline: {profile['headline']}"
+            profile_hook = (
+                f"Their headline: {profile['headline']}\n"
+                f"Reference something specific from this and ask a genuine question about it."
+            )
 
     system = (
-        f"Write ONE casual follow-up LinkedIn message on behalf of {cfg.get('agent_name', 'the user')}.\n\n"
-        f"Recent conversation:\n{conversation_text}\n"
-        f"{profile_context}\n\n"
-        f"Rules:\n"
+        f"Write ONE casual follow-up LinkedIn DM on behalf of {cfg.get('agent_name', 'the user')}.\n\n"
+        f"Use the conversation below only as background context — do NOT reference or repeat anything from the last message sent.\n\n"
+        f"Recent conversation:\n{conversation_text}\n\n"
+        + (f"PROFILE HOOK (use this as your opener):\n{profile_hook}\n\n" if profile_hook else "")
+        + f"Rules:\n"
         f"- 1-2 sentences max\n"
         f"- Use only their first name ({first})\n"
-        f"- Warm, human, zero pressure\n"
-        f"- Reference something specific from the conversation if possible\n"
-        f"- Never repeat or paraphrase the last agent message\n"
-        f"- No sales language or formal tone"
+        f"- Warm, curious, zero pressure\n"
+        f"- Never reference or paraphrase the last message the agent sent\n"
+        f"- Never use dashes, hyphens, or em dashes (— or -) anywhere\n"
+        f"- No sales language, no formal tone, no AI-sounding phrases\n"
+        f"- Sound like a real person who genuinely noticed something"
     )
     response = client.messages.create(
         model=claude_model,
@@ -106,7 +119,7 @@ def generate_reply(conversation: list[dict], profile: dict = None, cfg: dict = N
     if not messages:
         messages = [{"role": "user", "content": "[No reply from prospect yet]"}]
 
-    system = system_prompt
+    system = system_prompt + "\n\nIMPORTANT: Never use dashes, hyphens, or em dashes (— or -) anywhere in your reply.\n"
     if leading:
         system += f"\n\nFIRST MESSAGE(S) {agent_name.upper()} ALREADY SENT BEFORE THE PROSPECT REPLIED:\n"
         for m in leading:
@@ -118,9 +131,10 @@ def generate_reply(conversation: list[dict], profile: dict = None, cfg: dict = N
             system += f"{agent_name}: {m['content']}\n"
         system += (
             "Write a very short, casual follow-up nudge. "
-            "The tone should feel like a real person just checking in — something like 'Hey [name], just wanted to bump this up in case it got lost!' or 'Hey [name], was just thinking about my last message — still keen to connect if the timing works?' "
+            "The tone should feel like a real person just checking in, something like 'Hey [name], just wanted to bump this up in case it got lost!' or 'Hey [name], was just thinking about my last message, still keen to connect if the timing works?' "
             "Keep it to 1 or 2 sentences max. Warm, zero pressure, completely natural. "
-            "Never repeat or paraphrase the last message. Never sound salesy or formal.\n"
+            "Never repeat or paraphrase the last message. Never sound salesy or formal. "
+            "Never use dashes, hyphens, or em dashes (— or -) anywhere in the message.\n"
         )
     system += ex.build_examples_prompt(agent_name)
 

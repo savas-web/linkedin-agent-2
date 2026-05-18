@@ -5,9 +5,20 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
 from reportlab.lib.enums import TA_LEFT
 import sys
+import os
 
-CLIENT = sys.argv[1] if len(sys.argv) > 1 else "shaik_wahab"
+CLIENT = sys.argv[1] if len(sys.argv) > 1 else "{CLIENT}"
 OUTPUT = f"clients/{CLIENT}/Setup_Guide.pdf"
+DISPLAY_NAME = " ".join(word.capitalize() for word in CLIENT.split("_"))
+
+# Read Anthropic key from local .env
+_ANTHROPIC_KEY = "YOUR_ANTHROPIC_KEY_HERE"
+_env_path = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(_env_path):
+    for _line in open(_env_path):
+        if _line.startswith("ANTHROPIC_API_KEY="):
+            _ANTHROPIC_KEY = _line.strip().split("=", 1)[1]
+            break
 
 doc = SimpleDocTemplate(
     OUTPUT,
@@ -37,13 +48,13 @@ def code_para(text: str) -> Paragraph:
     return Paragraph(escaped, code_style)
 
 
-SETUP_CMD = f"curl -sSL https://raw.githubusercontent.com/savas-web/linkedin-agent-2/main/setup.sh | bash -s {CLIENT} YOUR_ANTHROPIC_KEY_HERE"
+SETUP_CMD = f"curl -sSL https://raw.githubusercontent.com/savas-web/linkedin-agent-2/main/setup.sh -o /tmp/setup.sh && bash /tmp/setup.sh {CLIENT} {_ANTHROPIC_KEY}"
 
 story = []
 
 story.append(Paragraph("LinkedIn Agent", title_style))
 story.append(Spacer(1, 8))
-story.append(Paragraph("Setup Guide  |  Shaik Wahab", subtitle_style))
+story.append(Paragraph(f"Setup Guide  |  {DISPLAY_NAME}", subtitle_style))
 story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#0a66c2"), spaceAfter=16))
 
 steps = [
@@ -61,7 +72,7 @@ steps = [
         "title": "Step 2 &mdash; Run the setup command",
         "body": [
             "Copy and paste the entire line below into Terminal and press Enter.",
-            "This will take a few minutes. Text will move on the screen &mdash; that is normal. Wait until it stops.",
+            "This installs everything automatically: Homebrew, Python, the agent, and the browser. It takes 3 to 5 minutes. Text will scroll on the screen &mdash; that is normal. Wait until it stops completely.",
         ],
         "code": SETUP_CMD,
         "note": "If it asks for your Mac password, type it and press Enter. You will not see the password as you type &mdash; that is normal.",
@@ -72,8 +83,8 @@ steps = [
             "You will have received two files from your account manager:",
             "<b>config.json</b> and <b>system_prompt.txt</b>",
             "Place both files into this folder on your Mac:",
-            "Home folder &rarr; linkedin-agent-2 &rarr; clients &rarr; shaik_wahab",
-            "To get there: open Finder, click on your name in the left sidebar, open linkedin-agent-2, open clients, open shaik_wahab, then drag both files in.",
+            f"Home folder &rarr; linkedin-agent-2 &rarr; clients &rarr; {CLIENT}",
+            f"To get there: open Finder, click on your name in the left sidebar, open linkedin-agent-2, open clients, open {CLIENT}, then drag both files in.",
         ],
         "code": None,
         "note": None,
@@ -83,7 +94,7 @@ steps = [
         "body": [
             "Go back to Terminal and paste this in, then press Enter:",
         ],
-        "code": "cd ~/linkedin-agent-2 && bash install_client.sh shaik_wahab && bash install_updater.sh shaik_wahab",
+        "code": f"cd ~/linkedin-agent-2 && bash install_client.sh {CLIENT} && bash install_updater.sh {CLIENT}",
         "note": 'Wait for it to finish. When you see "Agent installed and running" you are good.',
     },
     {
@@ -127,11 +138,11 @@ story.append(Paragraph("Quick reference", h2_style))
 
 quick = [
     ("Start the agent manually",
-     "cd ~/linkedin-agent-2 && source venv/bin/activate && python main.py shaik_wahab"),
+     f"cd ~/linkedin-agent-2 && source venv/bin/activate && python main.py {CLIENT}"),
     ("Stop the agent",
-     "launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/digital.rooney.shaik_wahab.plist"),
+     f"launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/digital.rooney.{CLIENT}.plist"),
     ("Restart the agent",
-     "launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/digital.rooney.shaik_wahab.plist && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/digital.rooney.shaik_wahab.plist"),
+     f"launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/digital.rooney.{CLIENT}.plist && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/digital.rooney.{CLIENT}.plist"),
 ]
 
 for label, cmd in quick:
