@@ -302,7 +302,11 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
         an.update_conversation(thread_id, name, messages, cfg.get("calendly_link", ""), profile=profile)
 
         print(f"  🤖 Generating reply for {name}...")
-        reply = generate_reply(messages, profile, cfg)
+        try:
+            reply = generate_reply(messages, profile, cfg)
+        except Exception as api_err:
+            print(f"  ⚠️  Claude API error for {name}, skipping: {api_err}")
+            continue
         if not reply:
             print(f"  ⚠️  Could not generate reply for {name}.")
             continue
