@@ -12,6 +12,9 @@ ENV_FILE="$AGENT_DIR/.env"
 
 cd "$AGENT_DIR"
 
+GITHUB_TOKEN="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"
+git remote set-url origin "https://$GITHUB_TOKEN@github.com/savas-web/linkedin-agent-2.git"
+
 git fetch origin main --quiet
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)

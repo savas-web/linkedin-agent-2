@@ -3,7 +3,8 @@ set -e
 
 CLIENT_NAME="$1"
 ANTHROPIC_KEY="$2"
-REPO="https://github.com/savas-web/linkedin-agent-2.git"
+GITHUB_TOKEN="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"
+REPO="https://$GITHUB_TOKEN@github.com/savas-web/linkedin-agent-2.git"
 INSTALL_DIR="$HOME/linkedin-agent-2"
 
 if [ -z "$CLIENT_NAME" ] || [ -z "$ANTHROPIC_KEY" ]; then
@@ -38,6 +39,7 @@ fi
 if [ -d "$INSTALL_DIR/.git" ]; then
     echo "Updating existing installation..."
     cd "$INSTALL_DIR"
+    git remote set-url origin "$REPO"
     git pull origin main --quiet
 else
     echo "Downloading agent..."

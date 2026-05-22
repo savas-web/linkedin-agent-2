@@ -7,7 +7,6 @@ venv/
 
 # Client data — never commit
 clients/*/config.json
-clients/*/system_prompt.txt
 
 # Client runtime data
 clients/*/state.json
