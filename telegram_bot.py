@@ -121,6 +121,7 @@ async def send_approval(app: Application, approval_id: str, name: str, their_msg
         text=text,
         parse_mode="MarkdownV2",
         reply_markup=_approval_keyboard(approval_id),
+        disable_web_page_preview=True,
     )
     return msg.message_id
 
@@ -139,6 +140,7 @@ async def send_followup_approval(app: Application, approval_id: str, name: str, 
         text=text,
         parse_mode="MarkdownV2",
         reply_markup=_approval_keyboard(approval_id),
+        disable_web_page_preview=True,
     )
     return msg.message_id
 

@@ -154,6 +154,7 @@ git push
 | Dada Ra | `dadara-2026` |
 | Shaik Wahab | `wahab-2026` |
 | Akash Arora | `akash-2026` |
+| Marc Miller | `marc-2026` |
 
 ---
 
