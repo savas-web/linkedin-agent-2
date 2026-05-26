@@ -499,6 +499,7 @@ async def main():
     try:
         while True:
             print("─── Tick ───────────────────────────────")
+            tick_start = asyncio.get_event_loop().time()
 
             if cfg.get("weekdays_only") and datetime.now().weekday() >= 5:
                 print("  Weekend — skipping tick (weekdays_only)")
@@ -571,24 +572,37 @@ async def main():
                 os.system(f"launchctl unload {plist}")
                 break
 
-            await flush_unread_queue(browser)
-            await flush_approved_queue(browser, cfg)
-            await process_inbox(browser, tg_app, cfg)
-            await check_followups(browser, tg_app, cfg)
-            await check_pending_reminders(tg_app, cfg)
-            await send_weekly_report(tg_app, cfg)
-            await send_heartbeat(cfg)
-
-            # Park on a blank page during sleep so LinkedIn's JS
-            # does not keep running and crash the renderer.
             try:
-                if await browser.is_alive():
-                    await browser.page.goto("about:blank", wait_until="load", timeout=8_000)
-            except Exception:
-                pass
+                await flush_unread_queue(browser)
+                await flush_approved_queue(browser, cfg)
+                await process_inbox(browser, tg_app, cfg)
+                await check_followups(browser, tg_app, cfg)
+                await check_pending_reminders(tg_app, cfg)
+                await send_weekly_report(tg_app, cfg)
+                await send_heartbeat(cfg)
 
-            print(f"Sleeping {poll_interval}s...\n")
-            await asyncio.sleep(poll_interval)
+                # Park on a blank page during sleep so LinkedIn's JS
+                # does not keep running and crash the renderer.
+                try:
+                    if await browser.is_alive():
+                        await browser.page.goto("about:blank", wait_until="load", timeout=8_000)
+                except Exception:
+                    pass
+
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                print(f"  ⚠️  Tick error (recovering): {e}")
+
+            elapsed = asyncio.get_event_loop().time() - tick_start
+            remaining = max(0, poll_interval - elapsed)
+            print(f"Sleeping {int(remaining)}s...\n")
+            try:
+                await asyncio.sleep(remaining)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                pass  # browser crash during sleep — handle at start of next tick
     except (KeyboardInterrupt, asyncio.CancelledError):
         print("\n🛑 Shutting down...")
     finally:

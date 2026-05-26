@@ -39,6 +39,7 @@ class LinkedInBrowser:
             ),
         )
         self.page = await self.context.new_page()
+        self.page.on("crash", lambda _: None)  # suppress unhandled crash exceptions
 
     async def stop(self):
         if self.context:
@@ -55,6 +56,7 @@ class LinkedInBrowser:
             # before declaring the whole browser dead.
             try:
                 self.page = await self.context.new_page()
+                self.page.on("crash", lambda _: None)
                 await self.page.evaluate("1")
                 return True
             except Exception:
