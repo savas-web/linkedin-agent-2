@@ -473,7 +473,8 @@ async def main():
                 raise
     print("✅ Telegram bot running.")
 
-    browser = LinkedInBrowser(client_dir)
+    headless = cfg.get("headless", True)
+    browser = LinkedInBrowser(client_dir, headless=headless)
     await browser.start()
     await browser.ensure_logged_in()
     print("✅ LinkedIn browser ready.\n")

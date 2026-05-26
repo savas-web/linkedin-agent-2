@@ -6,8 +6,9 @@ from playwright.async_api import async_playwright, BrowserContext
 
 
 class LinkedInBrowser:
-    def __init__(self, client_dir: Path):
+    def __init__(self, client_dir: Path, headless: bool = True):
         self.user_data_dir = str(client_dir / "linkedin_profile")
+        self.headless = headless
         self.playwright = None
         self.context: BrowserContext = None
         self.page = None
@@ -16,7 +17,7 @@ class LinkedInBrowser:
         self.playwright = await async_playwright().start()
         self.context = await self.playwright.chromium.launch_persistent_context(
             user_data_dir=self.user_data_dir,
-            headless=False,
+            headless=self.headless,
             viewport={"width": 1280, "height": 800},
             user_agent=(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
