@@ -579,6 +579,14 @@ async def main():
             await send_weekly_report(tg_app, cfg)
             await send_heartbeat(cfg)
 
+            # Park on a blank page during sleep so LinkedIn's JS
+            # does not keep running and crash the renderer.
+            try:
+                if await browser.is_alive():
+                    await browser.page.goto("about:blank", wait_until="load", timeout=8_000)
+            except Exception:
+                pass
+
             print(f"Sleeping {poll_interval}s...\n")
             await asyncio.sleep(poll_interval)
     except (KeyboardInterrupt, asyncio.CancelledError):

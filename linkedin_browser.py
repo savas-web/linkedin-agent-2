@@ -51,7 +51,14 @@ class LinkedInBrowser:
             await self.page.evaluate("1")
             return True
         except Exception:
-            return False
+            # Page/renderer crashed — try recovering with a fresh page
+            # before declaring the whole browser dead.
+            try:
+                self.page = await self.context.new_page()
+                await self.page.evaluate("1")
+                return True
+            except Exception:
+                return False
 
     async def restart(self):
         try:
