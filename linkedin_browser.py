@@ -15,9 +15,11 @@ class LinkedInBrowser:
 
     async def start(self):
         self.playwright = await async_playwright().start()
+        extra_args = ["--headless=new", "--disable-gpu"] if self.headless else []
         self.context = await self.playwright.chromium.launch_persistent_context(
             user_data_dir=self.user_data_dir,
-            headless=self.headless,
+            headless=False,
+            args=extra_args,
             viewport={"width": 1280, "height": 800},
             user_agent=(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
