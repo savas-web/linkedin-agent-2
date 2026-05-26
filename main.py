@@ -456,6 +456,16 @@ async def check_pending_reminders(tg_app, cfg: dict):
 
 
 async def main():
+    # Register SIGTERM via asyncio's safe mechanism (runs inside the event loop,
+    # not in a raw OS signal handler). Raw signal.signal() callbacks that call
+    # print/traceback are async-signal-unsafe and corrupt the kqueue selector
+    # in Python 3.14. This cancels the main task cleanly instead.
+    import signal as _sig
+    _main_task = asyncio.current_task()
+    asyncio.get_running_loop().add_signal_handler(
+        _sig.SIGTERM, lambda: _main_task.cancel("SIGTERM")
+    )
+
     client_name = get_client_name()
     cfg = cfg_module.load(client_name)
     client_dir = cfg["client_dir"]
@@ -611,16 +621,6 @@ async def main():
         await tg_app.stop()
         await tg_app.shutdown()
         print("Bye.")
-
-
-import signal as _signal
-
-def _log_signal(signum, frame):
-    import traceback
-    print(f"⚡ Signal {signum} received at:", flush=True)
-    traceback.print_stack(frame)
-
-_signal.signal(_signal.SIGTERM, _log_signal)
 
 
 if __name__ == "__main__":
