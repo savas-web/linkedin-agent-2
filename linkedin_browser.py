@@ -45,9 +45,10 @@ class LinkedInBrowser:
         self.page.on("crash", lambda _: None)  # suppress unhandled crash exceptions
 
     async def stop_context(self):
-        """Close the browser context and kill any lingering Chromium processes.
-        Keeps the Playwright subprocess alive so we avoid the CancelledError
-        that playwright.stop() causes in Python 3.14."""
+        """Close the browser context only. Keeps the Playwright subprocess alive
+        to avoid the CancelledError that playwright.stop() causes in Python 3.14.
+        We do NOT pkill here — that kills Playwright's stdio pipes which crashes
+        asyncio's kqueue selector. Let Playwright handle Chromium cleanup."""
         if self.context:
             try:
                 await self.context.close()
@@ -55,9 +56,8 @@ class LinkedInBrowser:
                 pass
             self.context = None
             self.page = None
-        # Kill any Chromium that still holds the profile lock
-        subprocess.run(["pkill", "-f", self.user_data_dir], capture_output=True)
-        await asyncio.sleep(1)
+        # Give Chromium time to exit cleanly, then remove lock files
+        await asyncio.sleep(2)
         Path(self.user_data_dir, "SingletonLock").unlink(missing_ok=True)
         Path(self.user_data_dir, "SingletonSocket").unlink(missing_ok=True)
 
@@ -88,12 +88,9 @@ class LinkedInBrowser:
 
     async def restart(self):
         try:
-            await self.stop_context()
+            await self.stop_context()  # closes context + waits 2s + cleans locks
         except Exception:
             pass
-        subprocess.run(["pkill", "-f", self.user_data_dir], capture_output=True)
-        await asyncio.sleep(3)
-        Path(self.user_data_dir, "SingletonLock").unlink(missing_ok=True)
         await asyncio.sleep(1)
         await self.start()
         await self.ensure_logged_in()
