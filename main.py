@@ -372,12 +372,15 @@ async def check_followups(browser: LinkedInBrowser, tg_app, cfg: dict):
 
         print(f"  🔁 Follow-up candidate: {name}")
         try:
+            # Stabilise browser before navigating to the thread
+            await browser.page.goto("about:blank", timeout=8_000)
             messages = await browser.get_conversation_messages(thread_id)
         except Exception as e:
-            print(f"  ⚠️  Could not read thread for {name}, skipping: {e}")
-            if not await browser.is_alive():
-                print(f"  ⛔ Browser crashed reading {name} — dismissing thread permanently.")
-                an.mark_dismissed(thread_id)
+            print(f"  ⚠️  Could not read thread for {name}: {e}")
+            alive = await browser.is_alive()
+            print(f"  ⛔ Dismissing {name} permanently {'(browser crashed)' if not alive else '(thread unreadable)'}.")
+            an.mark_dismissed(thread_id)
+            if not alive:
                 await browser.restart()
             continue
         if not messages or messages[-1]["role"] == "user":
