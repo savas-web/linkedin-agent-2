@@ -488,6 +488,12 @@ async def main():
     poll_interval = cfg["poll_interval"]
     print(f"🔄 Polling every {poll_interval}s. Running continuously.\n")
 
+    # One browser object for the lifetime of the process.
+    # Playwright subprocess stays alive; only the browser CONTEXT is opened
+    # and closed per tick so no Chromium runs during the sleep gap.
+    browser = LinkedInBrowser(client_dir, headless=headless)
+    await browser.start()  # starts Playwright subprocess only
+
     session_alert_sent = False
 
     try:
@@ -500,13 +506,11 @@ async def main():
                 await asyncio.sleep(poll_interval)
                 continue
 
-            # Open browser fresh every tick — no Chromium running during sleep,
-            # so it cannot crash, propagate exceptions, or show windows.
-            browser = LinkedInBrowser(client_dir, headless=headless)
+            # Open a fresh browser context for this tick
             try:
-                await browser.start()
+                await browser.start()  # reuses playwright, opens new context
             except Exception as e:
-                print(f"  ⚠️  Browser failed to start: {e}")
+                print(f"  ⚠️  Browser context failed to start: {e}")
                 await asyncio.sleep(30)
                 continue
 
@@ -576,9 +580,11 @@ async def main():
             except Exception as e:
                 print(f"  ⚠️  Tick error (recovering): {e}")
             finally:
-                # Always close browser before sleeping — no Chromium during idle
+                # Close browser context before sleeping — no Chromium during idle.
+                # We do NOT stop the Playwright subprocess (that causes CancelledError
+                # in Python 3.14 and kills the process). Playwright stays alive.
                 try:
-                    await browser.stop()
+                    await browser.stop_context()
                 except Exception:
                     pass
 

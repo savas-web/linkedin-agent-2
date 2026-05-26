@@ -14,7 +14,8 @@ class LinkedInBrowser:
         self.page = None
 
     async def start(self):
-        self.playwright = await async_playwright().start()
+        if not self.playwright:
+            self.playwright = await async_playwright().start()
         # headless=False tells Playwright not to inject its own headless flags;
         # --headless=new passed directly to Chromium achieves true headless
         # without conflicting with the persistent profile format.
@@ -41,11 +42,28 @@ class LinkedInBrowser:
         self.page = await self.context.new_page()
         self.page.on("crash", lambda _: None)  # suppress unhandled crash exceptions
 
-    async def stop(self):
+    async def stop_context(self):
+        """Close the browser context only — keep Playwright subprocess alive.
+        Calling playwright.stop() in Python 3.14 cancels asyncio tasks and
+        kills the process. We avoid that by never stopping the subprocess
+        mid-run; it dies naturally when the Python process exits."""
         if self.context:
-            await self.context.close()
+            try:
+                await self.context.close()
+            except Exception:
+                pass
+            self.context = None
+            self.page = None
+
+    async def stop(self):
+        """Full teardown — only call at process exit."""
+        await self.stop_context()
         if self.playwright:
-            await self.playwright.stop()
+            try:
+                await self.playwright.stop()
+            except Exception:
+                pass
+            self.playwright = None
 
     async def is_alive(self) -> bool:
         try:
@@ -64,7 +82,7 @@ class LinkedInBrowser:
 
     async def restart(self):
         try:
-            await self.stop()
+            await self.stop_context()
         except Exception:
             pass
         subprocess.run(["pkill", "-f", self.user_data_dir], capture_output=True)
