@@ -35,6 +35,10 @@ fi
 
 echo "$(date): Restarting agent for $CLIENT_NAME..."
 launchctl bootout gui/$(id -u) "$PLIST_PATH" 2>/dev/null || true
-sleep 2
+pkill -f "$AGENT_DIR/clients/$CLIENT_NAME/linkedin_profile" 2>/dev/null || true
+sleep 6
+rm -f "$AGENT_DIR/clients/$CLIENT_NAME/linkedin_profile/SingletonLock" \
+      "$AGENT_DIR/clients/$CLIENT_NAME/linkedin_profile/SingletonSocket" \
+      "$AGENT_DIR/clients/$CLIENT_NAME/linkedin_profile/SingletonCookie" 2>/dev/null || true
 launchctl bootstrap gui/$(id -u) "$PLIST_PATH"
 echo "$(date): Agent restarted."
