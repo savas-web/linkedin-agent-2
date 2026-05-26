@@ -87,6 +87,8 @@ def get_followup_candidates(max_follow_ups: int, follow_up_days: int) -> list:
     threshold = follow_up_days * 86400
     candidates = []
     for thread_id, conv in data.items():
+        if conv.get("dismissed"):
+            continue
         if not conv.get("agent_sent_at"):
             continue
         if conv.get("follow_up_count", 0) >= max_follow_ups:
@@ -123,6 +125,7 @@ def backfill_agent_sent():
 def mark_dismissed(thread_id: str):
     data = load()
     if thread_id in data:
+        data[thread_id]["dismissed"] = True
         data[thread_id]["follow_up_count"] = 99
         save(data)
 
