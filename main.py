@@ -371,7 +371,11 @@ async def check_followups(browser: LinkedInBrowser, tg_app, cfg: dict):
             continue
 
         print(f"  🔁 Follow-up candidate: {name}")
-        messages = await browser.get_conversation_messages(thread_id)
+        try:
+            messages = await browser.get_conversation_messages(thread_id)
+        except Exception as e:
+            print(f"  ⚠️  Could not read thread for {name}, skipping: {e}")
+            continue
         if not messages or messages[-1]["role"] == "user":
             continue
 
