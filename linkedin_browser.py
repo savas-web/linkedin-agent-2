@@ -15,12 +15,21 @@ class LinkedInBrowser:
 
     async def start(self):
         self.playwright = await async_playwright().start()
-        args = ["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"]
+        # headless=False tells Playwright not to inject its own headless flags;
+        # --headless=new passed directly to Chromium achieves true headless
+        # without conflicting with the persistent profile format.
+        args = [
+            "--disable-gpu",
+            "--no-first-run",
+            "--disable-session-crashed-bubble",
+            "--disable-infobars",
+            "--disable-notifications",
+        ]
         if self.headless:
             args.append("--headless=new")
         self.context = await self.playwright.chromium.launch_persistent_context(
             user_data_dir=self.user_data_dir,
-            headless=self.headless,
+            headless=False,
             args=args,
             viewport={"width": 1280, "height": 800},
             user_agent=(
