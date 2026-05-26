@@ -485,15 +485,9 @@ async def main():
     print("✅ Telegram bot running.")
 
     headless = cfg.get("headless", True)
-    browser = LinkedInBrowser(client_dir, headless=headless)
-    await browser.start()
-    await browser.ensure_logged_in()
-    print("✅ LinkedIn browser ready.\n")
-
     poll_interval = cfg["poll_interval"]
     print(f"🔄 Polling every {poll_interval}s. Running continuously.\n")
 
-    browser_error_count = 0
     session_alert_sent = False
 
     try:
@@ -506,20 +500,18 @@ async def main():
                 await asyncio.sleep(poll_interval)
                 continue
 
-            if not await browser.is_alive():
-                browser_error_count += 1
-                print(f"  Browser closed (failure {browser_error_count}), restarting...")
-                if browser_error_count >= 2:
-                    await send_operator_alert(
-                        f"⚠️ *{cfg['agent_name']}* ({cfg['client_name']})\n"
-                        f"Browser has crashed {browser_error_count} times. Attempting restart."
-                    )
-                await browser.restart()
-                browser_error_count = 0
-            else:
-                browser_error_count = 0
+            # Open browser fresh every tick — no Chromium running during sleep,
+            # so it cannot crash, propagate exceptions, or show windows.
+            browser = LinkedInBrowser(client_dir, headless=headless)
+            try:
+                await browser.start()
+            except Exception as e:
+                print(f"  ⚠️  Browser failed to start: {e}")
+                await asyncio.sleep(30)
+                continue
 
-            if not await browser.is_logged_in():
+            logged_in = await browser.is_logged_in()
+            if not logged_in:
                 if not session_alert_sent:
                     print("  LinkedIn session expired, alerting operator and client...")
                     await send_operator_alert(
@@ -542,6 +534,7 @@ async def main():
                     )
                     session_alert_sent = True
                 print("  Skipping tick, waiting for LinkedIn login...")
+                await browser.stop()
                 await asyncio.sleep(poll_interval)
                 continue
             else:
@@ -580,33 +573,26 @@ async def main():
                 await check_pending_reminders(tg_app, cfg)
                 await send_weekly_report(tg_app, cfg)
                 await send_heartbeat(cfg)
-
-                # Park on a blank page during sleep so LinkedIn's JS
-                # does not keep running and crash the renderer.
+            except Exception as e:
+                print(f"  ⚠️  Tick error (recovering): {e}")
+            finally:
+                # Always close browser before sleeping — no Chromium during idle
                 try:
-                    if await browser.is_alive():
-                        await browser.page.goto("about:blank", wait_until="load", timeout=8_000)
+                    await browser.stop()
                 except Exception:
                     pass
 
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                print(f"  ⚠️  Tick error (recovering): {e}")
-
             elapsed = asyncio.get_event_loop().time() - tick_start
-            remaining = max(0, poll_interval - elapsed)
+            remaining = max(10, poll_interval - elapsed)
             print(f"Sleeping {int(remaining)}s...\n")
-            try:
-                await asyncio.sleep(remaining)
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                pass  # browser crash during sleep — handle at start of next tick
+            await asyncio.sleep(remaining)
     except (KeyboardInterrupt, asyncio.CancelledError):
         print("\n🛑 Shutting down...")
     finally:
-        await browser.stop()
+        try:
+            await browser.stop()
+        except Exception:
+            pass
         await tg_app.updater.stop()
         await tg_app.stop()
         await tg_app.shutdown()
