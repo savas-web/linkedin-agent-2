@@ -268,6 +268,13 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Edit cancelled.")
         return
 
+    if item.get("is_demo"):
+        del data["pending_approvals"][awaiting]
+        data["awaiting_edit"] = None
+        st.save(data)
+        await update.message.reply_text("DEMO — nothing sent.")
+        return
+
     data["approved_queue"].append({
         "thread_id": item["thread_id"],
         "message": edited,
