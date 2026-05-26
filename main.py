@@ -586,8 +586,16 @@ async def main():
             remaining = max(10, poll_interval - elapsed)
             print(f"Sleeping {int(remaining)}s...\n")
             await asyncio.sleep(remaining)
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        print("\n🛑 Shutting down...")
+    except KeyboardInterrupt:
+        print("\n🛑 KeyboardInterrupt — shutting down...")
+    except asyncio.CancelledError:
+        import traceback
+        print(f"\n🛑 CancelledError — shutting down (traceback below):")
+        traceback.print_exc()
+    except Exception as e:
+        import traceback
+        print(f"\n💀 FATAL: {type(e).__name__}: {e}")
+        traceback.print_exc()
     finally:
         try:
             await browser.stop()
@@ -597,6 +605,16 @@ async def main():
         await tg_app.stop()
         await tg_app.shutdown()
         print("Bye.")
+
+
+import signal as _signal
+
+def _log_signal(signum, frame):
+    import traceback
+    print(f"⚡ Signal {signum} received at:", flush=True)
+    traceback.print_stack(frame)
+
+_signal.signal(_signal.SIGTERM, _log_signal)
 
 
 if __name__ == "__main__":
