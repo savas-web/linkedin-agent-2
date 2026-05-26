@@ -16,6 +16,8 @@ class LinkedInBrowser:
     async def start(self):
         if not self.playwright:
             self.playwright = await async_playwright().start()
+        # Ensure no stale lock from a previous context
+        Path(self.user_data_dir, "SingletonLock").unlink(missing_ok=True)
         # headless=False tells Playwright not to inject its own headless flags;
         # --headless=new passed directly to Chromium achieves true headless
         # without conflicting with the persistent profile format.
@@ -43,10 +45,9 @@ class LinkedInBrowser:
         self.page.on("crash", lambda _: None)  # suppress unhandled crash exceptions
 
     async def stop_context(self):
-        """Close the browser context only — keep Playwright subprocess alive.
-        Calling playwright.stop() in Python 3.14 cancels asyncio tasks and
-        kills the process. We avoid that by never stopping the subprocess
-        mid-run; it dies naturally when the Python process exits."""
+        """Close the browser context and kill any lingering Chromium processes.
+        Keeps the Playwright subprocess alive so we avoid the CancelledError
+        that playwright.stop() causes in Python 3.14."""
         if self.context:
             try:
                 await self.context.close()
@@ -54,6 +55,11 @@ class LinkedInBrowser:
                 pass
             self.context = None
             self.page = None
+        # Kill any Chromium that still holds the profile lock
+        subprocess.run(["pkill", "-f", self.user_data_dir], capture_output=True)
+        await asyncio.sleep(1)
+        Path(self.user_data_dir, "SingletonLock").unlink(missing_ok=True)
+        Path(self.user_data_dir, "SingletonSocket").unlink(missing_ok=True)
 
     async def stop(self):
         """Full teardown — only call at process exit."""
