@@ -249,6 +249,7 @@ async def flush_approved_queue(browser: LinkedInBrowser, cfg: dict):
 async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
     data = st.load()
     pending_threads = {v["thread_id"] for v in data.get("pending_approvals", {}).values()}
+    pending_threads |= {v["thread_id"] for v in data.get("approved_queue", [])}
 
     conversations = await browser.get_unread_conversations()
     if not conversations:
@@ -273,6 +274,11 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
             continue
 
         last = messages[-1]
+
+        last_user_msg = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+        if an.is_dismissed(thread_id, last_user_msg):
+            print(f"  🚫 {name} — dismissed (no new message), skipping.")
+            continue
         if last.get("is_media") and last["role"] == "user":
             print(f"  📎 {name} sent media we can't read — marking unread and notifying.")
             await browser.mark_as_unread(thread_id)
@@ -547,9 +553,25 @@ async def main():
                         parse_mode="Markdown",
                     )
                     session_alert_sent = True
-                print("  Skipping tick, waiting for LinkedIn login...")
+                print("  Session expired — opening visible browser so client can log in...")
                 await browser.stop()
-                await asyncio.sleep(poll_interval)
+                login_browser = LinkedInBrowser(client_dir, headless=False)
+                await login_browser.start()
+                logged_in_now = False
+                for _ in range(60):  # wait up to 10 minutes
+                    try:
+                        logged_in_now = await login_browser.is_logged_in()
+                    except Exception:
+                        pass
+                    if logged_in_now:
+                        break
+                    await asyncio.sleep(10)
+                await login_browser.stop()
+                if logged_in_now:
+                    print("  Login detected! Resuming normal operation...")
+                    session_alert_sent = False
+                else:
+                    print("  Login timed out after 10 minutes, will retry next tick...")
                 continue
             else:
                 if session_alert_sent:

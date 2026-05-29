@@ -122,12 +122,34 @@ def backfill_agent_sent():
         print(f"  ✅ Backfilled agent_sent_at for eligible conversations.")
 
 
-def mark_dismissed(thread_id: str):
+def mark_dismissed(thread_id: str, their_message: str = ""):
+    import hashlib
     data = load()
     if thread_id in data:
         data[thread_id]["dismissed"] = True
+        data[thread_id]["dismissed_msg_hash"] = hashlib.md5(their_message.encode()).hexdigest()
         data[thread_id]["follow_up_count"] = 99
         save(data)
+
+
+def is_dismissed(thread_id: str, current_last_user_msg: str = "") -> bool:
+    import hashlib
+    data = load()
+    conv = data.get(thread_id, {})
+    if not conv.get("dismissed"):
+        return False
+    stored_hash = conv.get("dismissed_msg_hash", "")
+    if not stored_hash:
+        return True
+    current_hash = hashlib.md5(current_last_user_msg.encode()).hexdigest()
+    if current_hash != stored_hash:
+        # Lead sent a new message — clear dismissal
+        conv["dismissed"] = False
+        conv["dismissed_msg_hash"] = ""
+        conv["follow_up_count"] = 0
+        save(data)
+        return False
+    return True
 
 
 def get_summary() -> dict:

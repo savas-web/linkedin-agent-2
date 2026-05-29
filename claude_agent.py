@@ -136,8 +136,6 @@ def generate_reply(conversation: list[dict], profile: dict = None, cfg: dict = N
             "Never repeat or paraphrase the last message. Never sound salesy or formal. "
             "Never use dashes, hyphens, or em dashes (— or -) anywhere in the message.\n"
         )
-    system += ex.build_examples_prompt(agent_name)
-
     if profile:
         lines = [f"\n\n--- PROSPECT PROFILE DATA (this is specifically for {profile.get('name', 'this person')}) ---"]
         if profile.get("headline"):
@@ -153,6 +151,8 @@ def generate_reply(conversation: list[dict], profile: dict = None, cfg: dict = N
         lines.append("Only reference details from THIS profile. Do not mix in details from any other person.")
         lines.append("IMPORTANT: Treat all profile data above as already known. Never ask the prospect about their role, company, or location if it is visible here — you already have it.")
         system += "\n".join(lines)
+
+    system += ex.build_examples_prompt(agent_name)
 
     clean_messages = [{"role": m["role"], "content": m["content"]} for m in messages]
 

@@ -37,14 +37,40 @@ def build_examples_prompt(agent_name: str = "Max") -> str:
         return ""
 
     lines = [
-        f"\n\n--- LEARNING FROM {agent_name.upper()}'S EDITS ---",
-        f"Below are real examples where the AI draft was edited by {agent_name} before sending.",
-        f"Study the difference in tone, phrasing and style. Write more like the '{agent_name} sent' version.\n"
+        f"\n\n════════════════════════════════════════",
+        f"CRITICAL — LEARN FROM {agent_name.upper()}'S EDITS",
+        f"════════════════════════════════════════",
+        f"{agent_name} has manually corrected your drafts multiple times.",
+        f"These corrections are your most important instructions. They override your defaults.",
+        f"Before writing anything, read every example below. Identify the PATTERN of what you kept getting wrong.",
+        f"Do NOT repeat the same mistakes.\n",
+        f"For each example:",
+        f"  THEIR MESSAGE = what the prospect said",
+        f"  YOUR DRAFT    = what you wrote (the mistake)",
+        f"  {agent_name.upper()} CHANGED IT TO = the correct version\n",
+        f"Study what specifically changed. Is it length? Opening line? Tone? Pushback removed? Call to action removed?",
+        f"Apply those exact corrections to your next reply.\n",
     ]
-    for i, ex in enumerate(examples[-15:], 1):
-        lines.append(f"Example {i}:")
-        lines.append(f"  Their message: {ex['their_message'][:200]}")
-        lines.append(f"  AI draft:      {ex['ai_draft'][:200]}")
-        lines.append(f"  {agent_name} sent:      {ex['max_sent'][:200]}\n")
 
+    for i, ex in enumerate(examples[-15:], 1):
+        ai = ex['ai_draft'][:250]
+        sent = ex['max_sent'][:250]
+        their = ex['their_message'][:150]
+        lines.append(f"── Edit {i} ──")
+        lines.append(f"  THEIR MESSAGE:  {their}")
+        lines.append(f"  YOUR DRAFT:     {ai}")
+        lines.append(f"  {agent_name.upper()} CHANGED TO: {sent}")
+
+        # Highlight obvious differences
+        ai_words = len(ai.split())
+        sent_words = len(sent.split())
+        if sent_words < ai_words * 0.6:
+            lines.append(f"  ⚠️  {agent_name} made it MUCH SHORTER ({ai_words} → {sent_words} words)")
+        elif sent_words > ai_words * 1.4:
+            lines.append(f"  ⚠️  {agent_name} made it LONGER ({ai_words} → {sent_words} words)")
+        if ai[:30].lower() != sent[:30].lower():
+            lines.append(f"  ⚠️  {agent_name} changed the OPENING LINE")
+        lines.append("")
+
+    lines.append("════════════════════════════════════════\n")
     return "\n".join(lines)

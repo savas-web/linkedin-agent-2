@@ -4,6 +4,7 @@ import signal
 import uuid
 import state as st
 import examples as ex
+import analytics as an
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.helpers import escape_markdown
@@ -227,6 +228,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data.setdefault("mark_unread_queue", []).append(item["thread_id"])
         del data["pending_approvals"][approval_id]
         st.save(data)
+        an.mark_dismissed(item["thread_id"], item.get("their_message", ""))
         label = "⏭️ *Follow\\-up skipped*" if item.get("is_followup") else "⏭️ *Skipped — marked as unread*"
         await query.edit_message_text(
             _sent_text(item, agent_name) + f"\n\n{label}",
