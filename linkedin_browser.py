@@ -16,6 +16,15 @@ class LinkedInBrowser:
     async def start(self):
         if not self.playwright:
             self.playwright = await async_playwright().start()
+        # Close any existing context before opening a new one
+        if self.context:
+            try:
+                await self.context.close()
+            except Exception:
+                pass
+            self.context = None
+            self.page = None
+            await asyncio.sleep(2)
         # Ensure no stale lock from a previous context
         Path(self.user_data_dir, "SingletonLock").unlink(missing_ok=True)
         # headless=False tells Playwright not to inject its own headless flags;
