@@ -3,7 +3,7 @@ set -e
 
 CLIENT_NAME="$1"
 ANTHROPIC_KEY="$2"
-GITHUB_TOKEN="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"
+GITHUB_TOKEN="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"
 REPO="https://$GITHUB_TOKEN@github.com/savas-web/linkedin-agent-2.git"
 INSTALL_DIR="$HOME/linkedin-agent-2"
 
