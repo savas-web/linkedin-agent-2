@@ -539,6 +539,10 @@ async def main():
 
             logged_in = await browser.is_logged_in()
             if not logged_in:
+                _alert_state = st.load()
+                _last_alert = _alert_state.get("session_alert_sent_at")
+                _alert_age = (datetime.now(timezone.utc) - datetime.fromisoformat(_last_alert)).total_seconds() if _last_alert else 9999
+                session_alert_sent = _alert_age < 3600
                 if not session_alert_sent:
                     print("  LinkedIn session expired, alerting operator and client...")
                     await send_operator_alert(
@@ -560,6 +564,9 @@ async def main():
                         parse_mode="Markdown",
                     )
                     session_alert_sent = True
+                    _alert_state = st.load()
+                    _alert_state["session_alert_sent_at"] = datetime.now(timezone.utc).isoformat()
+                    st.save(_alert_state)
                 print("  Session expired — opening visible browser so client can log in...")
                 await browser.stop()
                 login_browser = LinkedInBrowser(client_dir, headless=False)
