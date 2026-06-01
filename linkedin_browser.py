@@ -16,6 +16,14 @@ class LinkedInBrowser:
     async def start(self):
         if not self.playwright:
             self.playwright = await async_playwright().start()
+        # If context is already open and healthy, reuse it — no close/reopen
+        if self.context and self.page:
+            try:
+                _ = self.context.pages  # will raise if context is closed
+                return
+            except Exception:
+                self.context = None
+                self.page = None
         # Close any existing context before opening a new one
         if self.context:
             try:
@@ -129,15 +137,53 @@ class LinkedInBrowser:
             await asyncio.sleep(3)
             print("✅ Logged in to LinkedIn!")
 
+    async def _get_unread_names_from_page(self, url: str, unread_only: bool = False) -> list[str]:
+        """Navigate to url and return names of (optionally unread-only) conversations."""
+        await self.page.goto(url, wait_until="domcontentloaded")
+        await asyncio.sleep(5)
+        try:
+            await self.page.wait_for_selector("li.msg-conversation-listitem", timeout=20_000)
+        except Exception:
+            return []
+        await asyncio.sleep(1)
+        items = await self.page.query_selector_all("li.msg-conversation-listitem")
+        names = []
+        for item in items:
+            try:
+                if unread_only:
+                    # Check for unread badge or bold indicator
+                    badge = await item.query_selector(".notification-badge, .msg-conversation-card__unread-count, [class*='unread']")
+                    if not badge:
+                        # Check aria-label for "unread"
+                        label = await item.get_attribute("aria-label") or ""
+                        if "unread" not in label.lower():
+                            continue
+                name_el = await item.query_selector(".msg-conversation-card__participant-names span")
+                name = (await name_el.inner_text()).strip() if name_el else None
+                if name:
+                    names.append(name)
+            except Exception:
+                continue
+        return names
+
     async def get_unread_conversations(self) -> list[dict]:
         inbox_url = "https://www.linkedin.com/messaging/?filter=unread"
+        regular_url = "https://www.linkedin.com/messaging/"
         try:
+            # Primary: use the unread filter page
             await self.page.goto(inbox_url, wait_until="domcontentloaded")
-            await asyncio.sleep(5)
+            await asyncio.sleep(6)
             try:
                 await self.page.wait_for_selector("li.msg-conversation-listitem", timeout=20_000)
             except Exception:
-                return []  # Genuinely no unread conversations
+                # Filter page empty — fall back to regular inbox with unread badge detection
+                print("  Unread filter empty — checking regular inbox for unread badges...")
+                candidate_names = await self._get_unread_names_from_page(regular_url, unread_only=True)
+                if not candidate_names:
+                    return []
+                inbox_url = regular_url
+                print(f"  Found {len(candidate_names)} unread conversations (via inbox fallback)")
+                return await self._resolve_conversations(candidate_names, inbox_url)
 
             await asyncio.sleep(1)
 
@@ -155,55 +201,57 @@ class LinkedInBrowser:
                 except Exception:
                     continue
 
-            # Second pass — re-query each conversation fresh by name after each navigation
-            # This avoids stale element handle errors
-            results = []
-            for name in candidate_names:
-                try:
-                    await self.page.goto(inbox_url, wait_until="domcontentloaded")
-                    await asyncio.sleep(3)
-
-                    all_items = await self.page.query_selector_all("li.msg-conversation-listitem")
-                    target = None
-                    for item in all_items:
-                        try:
-                            name_el = await item.query_selector(".msg-conversation-card__participant-names span")
-                            item_name = (await name_el.inner_text()).strip() if name_el else ""
-                            if item_name == name:
-                                link_el = await item.query_selector(".msg-conversation-listitem__link")
-                                if link_el:
-                                    target = link_el
-                                    break
-                        except Exception:
-                            continue
-
-                    if not target:
-                        continue
-
-                    await target.click()
-                    await asyncio.sleep(2)
-
-                    url = self.page.url
-                    match = re.search(r"/messaging/thread/([^/?]+)", url)
-                    if not match:
-                        continue
-
-                    thread_id = match.group(1)
-                    profile_url = await self._get_profile_url_from_conversation()
-
-                    results.append({
-                        "thread_id": thread_id,
-                        "name": name,
-                        "profile_url": profile_url
-                    })
-
-                except Exception:
-                    continue
-
-            return results
+            return await self._resolve_conversations(candidate_names, inbox_url)
         except Exception as e:
             print(f"⚠️  Error fetching conversations: {e}")
             return []
+
+    async def _resolve_conversations(self, candidate_names: list[str], inbox_url: str) -> list[dict]:
+        """Second pass — navigate to each conversation by name and extract thread_id."""
+        results = []
+        for name in candidate_names:
+            try:
+                await self.page.goto(inbox_url, wait_until="domcontentloaded")
+                await asyncio.sleep(3)
+
+                all_items = await self.page.query_selector_all("li.msg-conversation-listitem")
+                target = None
+                for item in all_items:
+                    try:
+                        name_el = await item.query_selector(".msg-conversation-card__participant-names span")
+                        item_name = (await name_el.inner_text()).strip() if name_el else ""
+                        if item_name == name:
+                            link_el = await item.query_selector(".msg-conversation-listitem__link")
+                            if link_el:
+                                target = link_el
+                                break
+                    except Exception:
+                        continue
+
+                if not target:
+                    continue
+
+                await target.click()
+                await asyncio.sleep(2)
+
+                url = self.page.url
+                match = re.search(r"/messaging/thread/([^/?]+)", url)
+                if not match:
+                    continue
+
+                thread_id = match.group(1)
+                profile_url = await self._get_profile_url_from_conversation()
+
+                results.append({
+                    "thread_id": thread_id,
+                    "name": name,
+                    "profile_url": profile_url
+                })
+
+            except Exception:
+                continue
+
+        return results
 
     async def get_recent_posts(self, profile_url: str) -> list:
         if not profile_url:
