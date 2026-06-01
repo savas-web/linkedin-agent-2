@@ -312,9 +312,11 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
             reply = generate_reply(messages, profile, cfg)
         except Exception as api_err:
             print(f"  ⚠️  Claude API error for {name}, skipping: {api_err}")
+            await browser.mark_as_unread(thread_id)
             continue
         if not reply:
             print(f"  ⚠️  Could not generate reply for {name}.")
+            await browser.mark_as_unread(thread_id)
             continue
 
         data = st.load()
@@ -612,13 +614,12 @@ async def main():
             except Exception as e:
                 print(f"  ⚠️  Tick error (recovering): {e}")
             finally:
-                # Close browser context before sleeping — no Chromium during idle.
-                # We do NOT stop the Playwright subprocess (that causes CancelledError
-                # in Python 3.14 and kills the process). Playwright stays alive.
-                try:
-                    await browser.stop_context()
-                except Exception:
-                    pass
+                # Close browser context before sleeping unless keep_browser_open is set
+                if not cfg.get("keep_browser_open"):
+                    try:
+                        await browser.stop_context()
+                    except Exception:
+                        pass
 
             elapsed = asyncio.get_event_loop().time() - tick_start
             remaining = max(10, poll_interval - elapsed)
