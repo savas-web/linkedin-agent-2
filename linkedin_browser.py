@@ -120,7 +120,8 @@ class LinkedInBrowser:
                 return False
             if "linkedin.com" in url:
                 return True
-            await self.page.goto("https://www.linkedin.com/messaging/", wait_until="domcontentloaded", timeout=15_000)
+            # Use feed, not messaging — loading messaging marks conversations as read
+            await self.page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=15_000)
             await asyncio.sleep(2)
             url = self.page.url
             return not any(x in url for x in ["login", "authwall", "checkpoint", "signup"])
