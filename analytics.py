@@ -122,6 +122,29 @@ def backfill_agent_sent():
         print(f"  ✅ Backfilled agent_sent_at for eligible conversations.")
 
 
+def record_checked(thread_id: str):
+    """Record that we opened this conversation and the last message was ours."""
+    data = load()
+    if thread_id not in data:
+        data[thread_id] = {}
+    data[thread_id]["last_checked_at"] = datetime.now(timezone.utc).isoformat()
+    save(data)
+
+
+def was_recently_checked(thread_id: str, within_seconds: int = 7200) -> bool:
+    """Return True if we opened this conversation recently and the last message was ours."""
+    data = load()
+    conv = data.get(thread_id, {})
+    ts = conv.get("last_checked_at")
+    if not ts:
+        return False
+    try:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(ts)).total_seconds()
+        return age < within_seconds
+    except Exception:
+        return False
+
+
 def mark_dismissed(thread_id: str, their_message: str = ""):
     import hashlib
     data = load()

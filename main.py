@@ -253,7 +253,7 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
 
     conversations = await browser.get_unread_conversations()
     if not conversations:
-        print("  No unread conversations.")
+        print("  No conversations found.")
         return False
 
     actioned = False
@@ -265,6 +265,10 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
 
         if thread_id in pending_threads:
             print(f"  ⏳ {name} — already awaiting approval, skipping.")
+            continue
+
+        if an.was_recently_checked(thread_id):
+            print(f"  ⏭️  {name} — checked recently, skipping.")
             continue
 
         print(f"  📨 Reading conversation with {name}...")
@@ -295,6 +299,7 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
 
         if last["role"] == "assistant":
             print(f"  ↩️  {name} — last message is ours, nothing new to reply to.")
+            an.record_checked(thread_id)
             continue
 
         profile_url = conv.get("profile_url")

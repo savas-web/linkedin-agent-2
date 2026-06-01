@@ -168,29 +168,21 @@ class LinkedInBrowser:
         return names
 
     async def get_unread_conversations(self) -> list[dict]:
-        inbox_url = "https://www.linkedin.com/messaging/?filter=unread"
-        regular_url = "https://www.linkedin.com/messaging/"
+        inbox_url = "https://www.linkedin.com/messaging/"
         try:
-            # Primary: use the unread filter page
             await self.page.goto(inbox_url, wait_until="domcontentloaded")
-            await asyncio.sleep(6)
+            await asyncio.sleep(5)
             try:
                 await self.page.wait_for_selector("li.msg-conversation-listitem", timeout=20_000)
             except Exception:
-                # Filter page empty — fall back to regular inbox with unread badge detection
-                print("  Unread filter empty — checking regular inbox for unread badges...")
-                candidate_names = await self._get_unread_names_from_page(regular_url, unread_only=True)
-                if not candidate_names:
-                    return []
-                inbox_url = regular_url
-                print(f"  Found {len(candidate_names)} unread conversations (via inbox fallback)")
-                return await self._resolve_conversations(candidate_names, inbox_url)
+                return []
 
             await asyncio.sleep(1)
 
-            # First pass — collect names only (element handles go stale after navigation)
             raw_items = await self.page.query_selector_all("li.msg-conversation-listitem")
-            print(f"  Found {len(raw_items)} unread conversations")
+            # Limit to first 15 conversations
+            raw_items = raw_items[:15]
+            print(f"  Scanning {len(raw_items)} conversations in inbox")
 
             candidate_names = []
             for item in raw_items:
