@@ -19,23 +19,14 @@ SUPPORT_BOT_TOKEN = os.environ["SUPPORT_BOT_TOKEN"]
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "https://rooney-control-tower.up.railway.app")
 DASHBOARD_API_KEY = os.environ.get("DASHBOARD_API_KEY", "rd-secret-2026")
+CLIENT_NAME = os.environ.get("CLIENT_NAME", "")
+DASHBOARD_TOKEN = os.environ.get("DASHBOARD_TOKEN", "")
 
 SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.txt").read_text()
-USERS_FILE = Path("users.json")
 HISTORY_FILE = Path("history.json")
 MAX_HISTORY = 10
 
 claude = Anthropic(api_key=ANTHROPIC_API_KEY)
-
-
-def load_users() -> dict:
-    if USERS_FILE.exists():
-        return json.loads(USERS_FILE.read_text())
-    return {}
-
-
-def save_users(data: dict):
-    USERS_FILE.write_text(json.dumps(data, indent=2))
 
 
 def load_history() -> dict:
@@ -48,12 +39,12 @@ def save_history(data: dict):
     HISTORY_FILE.write_text(json.dumps(data, indent=2))
 
 
-async def fetch_status(dashboard_token: str) -> str:
+async def fetch_status() -> str:
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             r = await client.get(
                 f"{DASHBOARD_URL}/status",
-                params={"token": dashboard_token},
+                params={"token": DASHBOARD_TOKEN},
                 headers={"x-api-key": DASHBOARD_API_KEY},
             )
             if r.status_code == 200:
@@ -76,37 +67,8 @@ async def fetch_status(dashboard_token: str) -> str:
     return ""
 
 
-async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    args = context.args
-
-    if not args:
-        await update.message.reply_text(
-            "Hi! I'm your LinkedIn agent support assistant.\n\n"
-            "To get started, send:\n/start YOUR_DASHBOARD_TOKEN\n\n"
-            "Your dashboard token is in your config.json file (e.g. 'rooney-2026').\n\n"
-            "Once registered you can ask me anything — send text or screenshots of your terminal."
-        )
-        return
-
-    token = args[0].strip()
-    users = load_users()
-    users[user_id] = {"dashboard_token": token, "registered_at": datetime.now(timezone.utc).isoformat()}
-    save_users(users)
-
-    status = await fetch_status(token)
-    msg = f"You're registered! I now have access to your agent's live status.{status}\n\nAsk me anything — paste error messages or send screenshots of your terminal."
-    await update.message.reply_text(msg)
-
-
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    users = load_users()
-    user = users.get(user_id)
-    if not user:
-        await update.message.reply_text("Send /start YOUR_DASHBOARD_TOKEN to register first.")
-        return
-    status = await fetch_status(user["dashboard_token"])
+    status = await fetch_status()
     if status:
         await update.message.reply_text(status.strip())
     else:
@@ -115,9 +77,6 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
-    users = load_users()
-    user = users.get(user_id)
-
     history = load_history()
     user_history = history.get(user_id, [])
 
@@ -145,12 +104,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Please send text or a screenshot.")
         return
 
-    # Build system with optional live status
+    # Build system with live status
     system = SYSTEM_PROMPT
-    if user:
-        status = await fetch_status(user["dashboard_token"])
-        if status:
-            system += status
+    status = await fetch_status()
+    if status:
+        system += status
 
     # Append to history and call Claude
     user_history.append({"role": "user", "content": content})
@@ -183,11 +141,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
+    if not CLIENT_NAME or not DASHBOARD_TOKEN:
+        print("ERROR: CLIENT_NAME and DASHBOARD_TOKEN environment variables are required")
+        return
+
     app = ApplicationBuilder().token(SUPPORT_BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
-    print("Support bot running...")
+    print(f"Support bot running for {CLIENT_NAME}...")
     app.run_polling(drop_pending_updates=True)
 
 
