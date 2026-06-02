@@ -267,10 +267,6 @@ async def process_inbox(browser: LinkedInBrowser, tg_app, cfg: dict) -> bool:
             print(f"  ⏳ {name} — already awaiting approval, skipping.")
             continue
 
-        if an.was_recently_checked(thread_id):
-            print(f"  ⏭️  {name} — checked recently, skipping.")
-            continue
-
         print(f"  📨 Reading conversation with {name}...")
         messages = await browser.get_conversation_messages(thread_id)
 
