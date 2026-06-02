@@ -67,6 +67,21 @@ async def fetch_status() -> str:
     return ""
 
 
+async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        f"Hey! I'm your personalised LinkedIn agent support assistant.\n\n"
+        f"I can help you with:\n"
+        f"• Questions about your agent (is it running? how do I restart?)\n"
+        f"• Terminal errors and logs (send a screenshot)\n"
+        f"• Agent status and approvals\n"
+        f"• Troubleshooting any issues\n\n"
+        f"Just send me a message or screenshot and I'll answer to the best of my capabilities.\n\n"
+        f"If something isn't working for a prolonged period of time, contact Savas.\n\n"
+        f"Use /status to check your live agent status anytime."
+    )
+    await update.message.reply_text(msg)
+
+
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status = await fetch_status()
     if status:
@@ -146,6 +161,7 @@ def main():
         return
 
     app = ApplicationBuilder().token(SUPPORT_BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
     print(f"Support bot running for {CLIENT_NAME}...")
