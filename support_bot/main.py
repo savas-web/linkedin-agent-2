@@ -24,9 +24,22 @@ DASHBOARD_TOKEN = os.environ.get("DASHBOARD_TOKEN", "")
 
 SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.txt").read_text()
 HISTORY_FILE = Path("history.json")
+CUSTOM_ADDITIONS_FILE = Path("custom_additions.json")
 MAX_HISTORY = 10
+MAX_ADDITION_LENGTH = 2000
 
 claude = Anthropic(api_key=ANTHROPIC_API_KEY)
+
+
+def load_custom_additions() -> dict:
+    if CUSTOM_ADDITIONS_FILE.exists():
+        return json.loads(CUSTOM_ADDITIONS_FILE.read_text())
+    return {"additions": [], "updated_at": ""}
+
+
+def save_custom_additions(data: dict):
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    CUSTOM_ADDITIONS_FILE.write_text(json.dumps(data, indent=2))
 
 
 def load_history() -> dict:
@@ -90,8 +103,86 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Could not fetch live status right now. Ask me any question and I will help.")
 
 
+async def cmd_add_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = " ".join(context.args).strip()
+    if not text:
+        await update.message.reply_text("Usage: /add_prompt [instruction to add to system prompt]")
+        return
+
+    if len(text) > MAX_ADDITION_LENGTH:
+        await update.message.reply_text(f"Text is too long ({len(text)} chars). Max is {MAX_ADDITION_LENGTH} chars.")
+        return
+
+    msg = (
+        f"Preview of what will be added to your system prompt:\n\n"
+        f"\"{text}\"\n\n"
+        f"Reply with ✅ to confirm or ❌ to cancel."
+    )
+    await update.message.reply_text(msg)
+    context.user_data["pending_addition"] = text
+
+
+async def cmd_view_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_custom_additions()
+    if not data["additions"]:
+        await update.message.reply_text("No custom additions to your system prompt yet.")
+        return
+
+    msg = "Your custom system prompt additions:\n\n"
+    for i, add in enumerate(data["additions"], 1):
+        msg += f"{i}. \"{add}\"\n\n"
+    msg += "Use /remove_prompt [number] to remove one."
+    await update.message.reply_text(msg)
+
+
+async def cmd_remove_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    args = context.args
+    if not args or not args[0].isdigit():
+        await update.message.reply_text("Usage: /remove_prompt [number]\nUse /view_prompt to see the list.")
+        return
+
+    index = int(args[0]) - 1
+    data = load_custom_additions()
+
+    if index < 0 or index >= len(data["additions"]):
+        await update.message.reply_text("Invalid number.")
+        return
+
+    removed = data["additions"].pop(index)
+    save_custom_additions(data)
+    await update.message.reply_text(f"Removed: \"{removed}\"\n\nRestart your agent for changes to take effect.")
+
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
+
+    # Handle confirmation of pending prompt addition
+    if "pending_addition" in context.user_data:
+        text = update.message.text.strip()
+        if text == "✅":
+            data = load_custom_additions()
+            data["additions"].append(context.user_data["pending_addition"])
+            save_custom_additions(data)
+            await update.message.reply_text(
+                f"✅ Added to system prompt!\n\n"
+                f"Restart your agent for the change to take effect:\n\n"
+                f"`launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/digital.rooney.{CLIENT_NAME}.plist`\n"
+                f"`sleep 2`\n"
+                f"`launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/digital.rooney.{CLIENT_NAME}.plist`"
+            )
+            del context.user_data["pending_addition"]
+            return
+        elif text == "❌":
+            await update.message.reply_text("Cancelled.")
+            del context.user_data["pending_addition"]
+            return
+        else:
+            await update.message.reply_text("Please reply with ✅ to confirm or ❌ to cancel.")
+            return
+
     history = load_history()
     user_history = history.get(user_id, [])
 
@@ -163,6 +254,9 @@ def main():
     app = ApplicationBuilder().token(SUPPORT_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("status", cmd_status))
+    app.add_handler(CommandHandler("add_prompt", cmd_add_prompt))
+    app.add_handler(CommandHandler("view_prompt", cmd_view_prompt))
+    app.add_handler(CommandHandler("remove_prompt", cmd_remove_prompt))
     app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
     print(f"Support bot running for {CLIENT_NAME}...")
     app.run_polling(drop_pending_updates=True)
