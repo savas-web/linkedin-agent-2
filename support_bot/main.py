@@ -83,16 +83,21 @@ async def fetch_status() -> str:
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
         f"Hey! I'm your personalised LinkedIn agent support assistant.\n\n"
-        f"I can help you with:\n"
+        f"*I can help you with:*\n"
         f"• Questions about your agent (is it running? how do I restart?)\n"
         f"• Terminal errors and logs (send a screenshot)\n"
         f"• Agent status and approvals\n"
         f"• Troubleshooting any issues\n\n"
+        f"*Customize your agent:*\n"
+        f"• /add_prompt [instruction] — Add custom instruction to your agent\n"
+        f"• /view_prompt — See your custom additions\n"
+        f"• /remove_prompt [number] — Remove a custom instruction\n\n"
+        f"*Other commands:*\n"
+        f"• /status — Check your live agent status\n\n"
         f"Just send me a message or screenshot and I'll answer to the best of my capabilities.\n\n"
-        f"If something isn't working for a prolonged period of time, contact Savas.\n\n"
-        f"Use /status to check your live agent status anytime."
+        f"If something isn't working for a prolonged period of time, contact Savas."
     )
-    await update.message.reply_text(msg)
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
