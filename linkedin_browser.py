@@ -1,4 +1,5 @@
 import asyncio
+import random
 import re
 import subprocess
 from pathlib import Path
@@ -44,6 +45,7 @@ class LinkedInBrowser:
             "--disable-session-crashed-bubble",
             "--disable-infobars",
             "--disable-notifications",
+            "--disable-blink-features=AutomationControlled",
         ]
         if self.headless:
             args.append("--headless=new")
@@ -51,12 +53,17 @@ class LinkedInBrowser:
             user_data_dir=self.user_data_dir,
             headless=False,
             args=args,
+            ignore_default_args=["--enable-automation"],
             viewport={"width": 1280, "height": 800},
             user_agent=(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/124.0.0.0 Safari/537.36"
             ),
+        )
+        # Prevent navigator.webdriver from being detectable
+        await self.context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
         )
         self.page = await self.context.new_page()
         self.page.on("crash", lambda _: None)  # suppress unhandled crash exceptions
@@ -499,8 +506,13 @@ class LinkedInBrowser:
             await self.page.keyboard.press("Control+a")
             await asyncio.sleep(0.2)
 
-            await input_el.type(message, delay=28)
-            await asyncio.sleep(1)
+            for char in message:
+                await input_el.type(char, delay=0)
+                await asyncio.sleep(random.uniform(0.02, 0.09))
+                # Occasional longer pause mid-word (like thinking)
+                if char == " " and random.random() < 0.08:
+                    await asyncio.sleep(random.uniform(0.3, 0.8))
+            await asyncio.sleep(random.uniform(0.8, 1.5))
 
             send_btn = await self.page.query_selector("button.msg-form__send-button")
             if send_btn:

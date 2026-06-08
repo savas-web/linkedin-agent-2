@@ -464,6 +464,19 @@ async def check_pending_reminders(tg_app, cfg: dict):
     st.save(data)
 
 
+def _kill_profile_chromium(client_dir: Path):
+    """Force-kill any Chromium still holding the profile dir, then wipe lock files.
+    login_browser.stop() closes the context but the OS process can linger,
+    keeping a SingletonLock that makes the next launch_persistent_context hang
+    for 180 s before crashing."""
+    import subprocess
+    profile = str(client_dir / "linkedin_profile")
+    subprocess.run(["pkill", "-f", profile], capture_output=True)
+    import time; time.sleep(2)
+    for lock in ["SingletonLock", "SingletonSocket", "SingletonCookie"]:
+        (client_dir / "linkedin_profile" / lock).unlink(missing_ok=True)
+
+
 async def main():
     # Register SIGTERM via asyncio's safe mechanism (runs inside the event loop,
     # not in a raw OS signal handler). Raw signal.signal() callbacks that call
@@ -565,6 +578,7 @@ async def main():
                     st.save(_alert_state)
                 print("  Session expired — opening visible browser so client can log in...")
                 await browser.stop()
+                _kill_profile_chromium(client_dir)
                 login_browser = LinkedInBrowser(client_dir, headless=False)
                 await login_browser.start()
                 logged_in_now = False
@@ -577,6 +591,7 @@ async def main():
                         break
                     await asyncio.sleep(10)
                 await login_browser.stop()
+                _kill_profile_chromium(client_dir)
                 if logged_in_now:
                     print("  Login detected! Resuming normal operation...")
                     session_alert_sent = False
