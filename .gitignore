@@ -17,6 +17,8 @@ clients/*/examples.json
 clients/*/linkedin_profile/
 linkedin_profile/
 clients/*.zip
+clients/**/*.zip
+clients/*/updater.log
 
 # Root-level runtime files
 agent.log

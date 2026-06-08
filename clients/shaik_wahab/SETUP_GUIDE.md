@@ -19,7 +19,7 @@ A black or white window with a blinking cursor will open. That is Terminal. Leav
 Copy and paste this entire line into Terminal and press Enter:
 
 ```
-curl -sSL https://raw.githubusercontent.com/savas-web/linkedin-agent-2/main/setup.sh | bash -s shaik_wahab REDACTED_ANTHROPIC_KEY
+curl -sSL https://raw.githubusercontent.com/savas-web/linkedin-agent-2/main/setup.sh | bash -s shaik_wahab REPLACE_WITH_YOUR_ANTHROPIC_KEY
 ```
 
 This will take a few minutes. You will see text moving on the screen. That is normal. Wait until it stops and you see a message that says something like **"Almost there!"** or **"All done!"**
